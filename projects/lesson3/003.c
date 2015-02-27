@@ -2,49 +2,44 @@
 #include <string.h>
 #include <stdlib.h>
 
-union uchar_box{
-	unsigned char *p;
-	unsigned char *p_;
-};
-
-int int_bitcount(unsigned int input)
+/*int_bitcount用于计算int空间中，值为1的位数*/
+int int_bitcount(int input)
 {
-	int sum;
-	while(input >>= 1){
-		if(input & 1)
-			sum++;
+	int sum=0;
+	while(input){
+		sum += (input & 1);
+		input >>= 1;	//输入值跟1进行与操作，累加到sum，并且不断让input右移1位直至为0
 	}
 	return sum;
 }
 
+
+/*void_bitcount用于计算任意空间中，值为1的位数*/
 int void_bitcount(void *input,unsigned long size)
 {
-	int sum;
-	union uchar_box box = {.p = memcpy(malloc(size),input,size)};
+	int sum=0;
+	unsigned char *p,*p_;
+	p = (unsigned char *)memcpy(malloc(size),input,size);	//为了不损坏源数据，把输入的空间内容复制到malloc开辟的新空间
+	p_ = p;
 	
-	
-	printf("%lu\n",size);
+
 	while(size--){
-		while(*(box.p)){
-			if(*(box.p) & 1)
-				sum++;
-			*(box.p) >>= 1;
+		while(*p){
+			sum += (*p & 1);
+			*p >>= 1;	//同样，输入值跟1进行与操作，累加到sum，并且不断让input右移1位直至为0
 		}
-		(box.p)++;
+		p++;	//每次清算完一个字节，移动指针到下一字节，直至清算完size大小的空间
 	}
-	free(box.p_);
+	free(p_);
 	return sum;
 }
 
 int main(int argc,const char **argv)
 {
-	if(argc != 2){
-		printf("Usage: %s + [content]\n",argv[0]);
-		exit(1);
-	}
-
-	printf("int_bitcount: there are %d '1'.\n",int_bitcount((unsigned int)atoi(argv[1])));
-	printf("void_bitcount: there are %d '1'.\n",void_bitcount((void *)argv[1],sizeof(argv[1])));
+	int arr[2] = {0xf,0xff};
+	printf("int_bitcount: There are %d '1' in arr[0]\n",int_bitcount(arr[0]));
+	printf("void_bitcount: There are %d '1' in arr\n",void_bitcount(arr,sizeof(arr)));
+	printf("void_bitcount: There are %d '1' in \"Hello\"\n",void_bitcount("Hello",sizeof("Hello")));
 	return 0;
 }
 
