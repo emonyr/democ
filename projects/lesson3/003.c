@@ -19,8 +19,8 @@ int void_bitcount(void *input,unsigned long size)
 {
 	int sum=0;
 	unsigned char *p,*p_;
-	p = (unsigned char *)memcpy(malloc(size),input,size);	//为了不损坏源数据，把输入的空间内容复制到malloc开辟的新空间
-	p_ = p;
+	//为了不损坏源数据，把输入的空间内容复制到malloc开辟的新空间，并且用p_保存新空间的地址以便使用过后释放
+	p_ = memcpy(p = (unsigned char *)malloc(size),input,size);	
 	
 
 	while(size--){
