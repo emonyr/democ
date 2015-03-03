@@ -3,13 +3,12 @@
 
 char *perm_convert(int input)
 {
-	int a,i = 9;
+	int i = 9;
 	static char output[9];
 	
 	while(i > 0){
-		if(input & (1 << (i-1))){
-			a = i%3;
-			switch(a){
+		if(input & (1 << (i-1))){	
+			switch(i%3){
 				case 0:
 				output[9-i] = 'r';
 				break;
