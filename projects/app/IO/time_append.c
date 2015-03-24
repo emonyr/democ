@@ -34,6 +34,7 @@ int main()
         showtime->tm_year += 1900;
         showtime->tm_mon += 1;
         fprintf(output,"%d, %d-%d-%d %d:%d:%d\n",lineno,showtime->tm_year,showtime->tm_mon,showtime->tm_mday,showtime->tm_hour,showtime->tm_min,showtime->tm_sec);
+	fflush(output);
         fprintf(stdout,"%d, %d-%d-%d %d:%d:%d\n",lineno,showtime->tm_year,showtime->tm_mon,showtime->tm_mday,showtime->tm_hour,showtime->tm_min,showtime->tm_sec);
 		lineno++;
 		sleep(1);
