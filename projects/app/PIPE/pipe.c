@@ -13,7 +13,7 @@ int main()
 
 	//生成pipe
 	if(pipe(pipefd) == -1){
-		perror("pipe1");
+		perror("pipe");
 		exit(errno);
 	}
 	//第一个child，关闭pipefd[0]，写pipefd[1]
@@ -26,7 +26,7 @@ int main()
 			//第二个child，关闭pipefd[0]，sleep 2秒，然后写pipefd[1]
 			cpid2 = fork();
 			if(cpid2 == -1){
-				perror("pipe2");
+				perror("child2");
 				exit(errno);
 			}
 			else if(cpid2 == 0){
