@@ -23,31 +23,31 @@ int main()
 		exit(errno);
 	}
 	else if(cpid1 == 0){
-			//第二个child，关闭pipefd[0]，sleep 2秒，然后写pipefd[1]
-			cpid2 = fork();
-			if(cpid2 == -1){
-				perror("child2");
-				exit(errno);
-			}
-			else if(cpid2 == 0){
-				close(pipefd[0]);
-				sleep(1);
-				write(pipefd[1],"Child 2 is sending a message!",MSGSIZE);
-				close(pipefd[1]);
-			}
-			else{
 				close(pipefd[0]);
 				write(pipefd[1],"Child 1 is sending a message!",MSGSIZE);
 				close(pipefd[1]);
-			}
-		}
+    }
 	else{
-		close(pipefd[1]);
-		read(pipefd[0],buf,MSGSIZE);
-		printf("%s\n",buf);
-		read(pipefd[0],buf,MSGSIZE);
-		printf("%s\n",buf);
-		close(pipefd[0]);
+        //第二个child，关闭pipefd[0]，等待child1返回，然后写pipefd[1]
+        cpid2 = fork();
+        if(cpid2 == -1){
+            perror("child2");
+            exit(errno);
+        }
+        else if(cpid2 == 0){
+            close(pipefd[0]);
+            wait(cpid1,NULL,0);
+            write(pipefd[1],"Child 2 is sending a message!",MSGSIZE);
+            close(pipefd[1]);
+        }
+        else{
+            close(pipefd[1]);
+            read(pipefd[0],buf,MSGSIZE);
+            printf("%s\n",buf);
+            read(pipefd[0],buf,MSGSIZE);
+            printf("%s\n",buf);
+            close(pipefd[0]);
+        }
 	}
 
 	return 0;
