@@ -1,3 +1,6 @@
+/*
+* reader 用于从shared memory中获取STRSIZE长度的信息
+*/
 #include <stdio.h>
 #include <sys/shm.h>
 #include <sys/ipc.h>
@@ -9,7 +12,6 @@
 #include <sys/sem.h>
 #define STRSIZE 24
 #define SHMKEY 12345
-#define SEMKEY 0x10
 
 
 int main()

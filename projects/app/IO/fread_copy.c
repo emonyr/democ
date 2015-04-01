@@ -5,7 +5,7 @@
 
 int main(int argc,const char **argv)
 {
-	if(argc<3){
+	if(argc != 3){
 		printf("Usage: %s + inputfile + outputfile\n",argv[0]);
 		exit(errno);
 	}
