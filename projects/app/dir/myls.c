@@ -58,11 +58,11 @@ int main(int argc,char **argv)
 		strcpy(obj_dir,".");
 		simple_print();
 	}
-	else if(argv[1][1] == 'l' && argv[2] == NULL){
+	else if(strcmp(argv[1],"-l") == 0 && argv[2] == NULL){
 		strcpy(obj_dir,".");
 		complex_print();
 	}
-	else if(argv[1][1] == 'l' && argv[2] != NULL){
+	else if(strcmp(argv[1],"-l") == 0 && argv[2] != NULL){
 		strcpy(obj_dir,argv[2]);
 		complex_print();
 	}
@@ -71,7 +71,7 @@ int main(int argc,char **argv)
 		simple_print();
 	}
 	else{
-		printf("Usage: \n%s [-l] <dir>\n",argv[0]);exit(1);
+		printf("Usage: %s [-l] <dir>\n",argv[0]);exit(1);
 	}
 
 	return 0;
