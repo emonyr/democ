@@ -18,6 +18,7 @@ int filter(const struct dirent *d)
 	return 1;
 }
 
+//含"-l"的打印函数
 int complex_print()
 {
 	char reset[NAME_MAX];
@@ -26,7 +27,7 @@ int complex_print()
 	for(i=0;i<count;i++){
 		strcpy(obj_dir,reset);
 		strcat(obj_dir,"/");
-		strcat(obj_dir,namelist[i]->d_name);
+		strcat(obj_dir,namelist[i]->d_name);	//合并字符串，获得文件项的完整路径
 		if(stat(obj_dir,&buf) == 0)
 			printf("%lo %ld %ld %ld %lld %s\n",(unsigned long)buf.st_mode,buf.st_nlink,(long)buf.st_uid,(long)buf.st_gid,(long long)buf.st_size,namelist[i]->d_name);
 		else
@@ -35,6 +36,7 @@ int complex_print()
 	return 0;
 }
 
+//不含"-l"的打印函数
 int simple_print()
 {
 	count = scandir(obj_dir,&namelist,filter,alphasort);
