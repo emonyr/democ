@@ -21,21 +21,19 @@ int main(int argc,char **argv)
 		ERR("gethostbyname");
 	}
 	printf("%s\n",myhost->h_addr);
-	fflush(stdout);
 	
 	remote_sock.sin_family = AF_INET;
 	remote_sock.sin_port = htons(8080);
 	inet_aton(myhost->h_addr,(struct in_addr *)&remote_sock.sin_addr);
 	
-	
 	sockfd = socket(AF_INET,SOCK_STREAM,0);
 	if(sockfd == -1){
 		ERR("sockfd");
 	}
-	
 	if(connect(sockfd,(struct sockaddr *)&remote_sock,sizeof(remote_sock)) == -1){
 		ERR("connect");
 	}
+    
 	while(strncmp(buf,"quit",4) != 0){
 		if(recv(sockfd,buf,sizeof(buf),0) == -1){
 			ERR("recv");
