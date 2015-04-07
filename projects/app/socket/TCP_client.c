@@ -11,6 +11,10 @@
 
 int main(int argc,char **argv)
 {
+	if(argc != 2){
+		printf("Usage: %s + <hostname>\n",argv[0]);exit(1);
+	}
+
 	int sockfd;
 	char buf[100];
 	struct sockaddr_in remote_sock;
