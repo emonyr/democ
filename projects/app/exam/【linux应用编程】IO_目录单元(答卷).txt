@@ -1,5 +1,5 @@
 一、
-1.C
+1.B
 2.A
 3.B
 4.D
@@ -7,13 +7,13 @@
 6.B
 7.D
 8.C
-9.A D
+9.D
 10.B
 11.A
 12.C
 13.D
-14.B
-15.A
+14.A
+15.D
 
 二、
 1.T
@@ -67,6 +67,44 @@ int count_lines(const char *path){
 }
 
 四、
+
+int main(int argc,const char **argv)
+{
+    if(argc != 2){
+        printf(“attribute error\n”);
+    }
+    int file_fd;
+    char buf[BUFSIZE];
+    
+    //实现r
+    file_fd = open(argv[1],O_RDONLY);
+    close(file_fd);
+    //实现r+
+    file_fd = open(argv[1],O_RDWR);
+    close(file_fd);
+    //实现w
+    file_fd = open(argv[1],O_WRONLY|O_TRUNC|CREAT);
+    close(file_fd);
+    //实现w+
+    file_fd = open(argv[1],O_RDWR|O_TRUNC|CREAT);
+    close(file_fd);
+    //实现a
+    file_fd = open(argv[1],O_WRONLY|O_APPEND|O_CREAT);
+    close(file_fd);
+    //实现a+
+    file_fd = open(argv[1],O_RDWR|O_APPEND|O_CREAT);
+    close(file_fd);
+    
+    
+    return 0;
+}
+
+
+
+
+
+
+
 
 
 
