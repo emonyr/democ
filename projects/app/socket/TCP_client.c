@@ -7,7 +7,21 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <signal.h>
+#include <dirent.h>
 #define ERR(x) {perror(x);exit(errno);}
+
+int sockfd;
+
+void sig_exit_handler(int signum)
+{
+    if(signum == SIGINT || signum == SIGTERM){
+        if(send(sockfd,"quit",5,0) == -1){
+            ERR("send quit");
+        }
+    }
+    exit(1);
+}
 
 int main(int argc,char **argv)
 {
@@ -15,8 +29,7 @@ int main(int argc,char **argv)
 		printf("Usage: %s + <hostname>\n",argv[0]);exit(1);
 	}
 
-	int sockfd;
-	char buf[100];
+	char cmd[1024];
 	struct sockaddr_in remote_sock;
 	struct hostent *myhost;
 	
@@ -38,15 +51,19 @@ int main(int argc,char **argv)
 		ERR("connect");
 	}
     
-	while(strncmp(buf,"quit",4) != 0){
-		if(recv(sockfd,buf,sizeof(buf),0) == -1){
+    if(signal(SIGINT,sig_exit_handler) == SIG_ERR)
+        ERR("signal SIGINT");
+    if(signal(SIGTERM,sig_exit_handler) == SIG_ERR)
+        ERR("signal SIGTERM");
+    
+	while(strncmp(cmd,"quit",4) != 0){
+		if(recv(sockfd,cmd,1024,0) == -1){
 			ERR("recv");
 		}
-		printf("From server: %s\n",buf);
-		printf("Please input a command.\n");
-		fgets(buf,100,stdin);
-		if(send(sockfd,buf,sizeof(buf),0) == -1){
-			ERR("send buf");
+		printf(">%s\n",cmd);
+		fgets(cmd,1024,stdin);
+		if(send(sockfd,cmd,1024,0) == -1){
+			ERR("send cmd");
 		}
 	}
 	close(sockfd);
