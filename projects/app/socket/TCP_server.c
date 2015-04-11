@@ -16,9 +16,9 @@
 #include <dirent.h>
 #include <time.h>
 #define ERR(x) {perror(x);exit(errno);}
-#define BUFSIZE 512
-#define MAXCONNECT 10
+#define BUFSIZE 1024
 #define SENDSIZE 1024
+#define MAXCONNECT 10
 
 int client_fd,*client_count;
 socklen_t client_len;
