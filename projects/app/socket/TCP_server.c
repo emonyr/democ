@@ -91,16 +91,20 @@ void cmd_put()
 }
 
 
-void dispatch() //根据cmd分派任务
+int dispatch() //根据cmd分派任务
 {
     if(strncmp(cmd,"help",4) == 0)
         cmd_help();
-    if(strncmp(cmd,"list",4) == 0)
+    else if(strncmp(cmd,"list",4) == 0)
         cmd_list();
-    if(strncmp(cmd,"get",3) == 0)
+    else if(strncmp(cmd,"get",3) == 0)
         cmd_get();
-    if(strncmp(cmd,"out",3) == 0)
+    else if(strncmp(cmd,"out",3) == 0)
         cmd_put();
+    else if(send(client_fd,"Unknown command\nInput \"help\" for more information\n",SENDSIZE,0) == -1){
+        ERR("send Unknown command");
+    }
+    return 0;
 }
 
 int main(int argc,const char **argv)
@@ -121,14 +125,14 @@ int main(int argc,const char **argv)
 	if(server_fd == -1){
 		ERR("server_fd");
 	}
+    //绑定server_fd
+    if(bind(server_fd,(struct sockaddr *)&server_sock,sizeof(server_sock)) == -1){
+        ERR("bind");
+    }
     //设置server_fd端口可以被重复使用
     if(setsockopt(server_fd,SOL_SOCKET,SO_REUSEADDR,&reuse,sizeof(reuse)) == -1){
         ERR("setsockopt");
     }
-    //绑定server_fd
-	if(bind(server_fd,(struct sockaddr *)&server_sock,sizeof(server_sock)) == -1){
-		ERR("bind");
-	}
     //监听server_fd
 	if(listen(server_fd,MAXCONNECT) == -1){
 		ERR("listen");
