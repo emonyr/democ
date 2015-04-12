@@ -79,11 +79,34 @@ int cmd_list()
 
 int cmd_get()
 {
+	FILE *content;
+	
+	content = fopen(getarg(cmd),"r");
+	if(content == NULL){
+		send(client_fd,"file doesn't exist.\n",BUFSIZE,0);
+	}
+	while(fread(buf,BUFSIZE,1,content)){
+		if(send(client_fd,buf,BUFSIZE,0) == -1)
+        perror("send file");
+	}
+	
     return 0;
 }
 
 int cmd_put()
 {
+	FILE *content;
+	
+	while(recv(client_fd,buf,BUFSIZE,0)){
+		if(strcmp(buf,"file doesn't exist.\n") == 0 ){
+			printf("file doesn't exist.\n");
+			break;
+		}
+		content = fopen(getarg(cmd),"a+");
+		fwrite(buf,BUFSIZE,1,content);
+		fclose(content);
+	}
+	
     return 0;
 }
 

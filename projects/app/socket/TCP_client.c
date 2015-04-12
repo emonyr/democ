@@ -57,11 +57,36 @@ int cmd_list()
 
 int cmd_get()
 {
+	FILE *content;
+	
+	while(recv(sockfd,buf,BUFSIZE,0)){
+		if(strcmp(buf,"file doesn't exist.\n") == 0 ){
+			printf("file doesn't exist.\n");
+			break;
+		}
+		content = fopen(getarg(cmd),"a+");
+		fwrite(buf,BUFSIZE,1,content);
+		fclose(content);
+	}
+	printf("file downloaded\n");
+	
     return 0;
 }
 
 int cmd_put()
 {
+	FILE *content;
+	
+	content = fopen(getarg(cmd),"r");
+	if(content == NULL){
+		ERR("fopen");
+	}
+	while(fread(buf,BUFSIZE,1,content)){
+		if(send(sockfd,buf,BUFSIZE,0) == -1)
+        perror("send file");
+	}
+	printf("file sent.\n");
+	
     return 0;
 }
 
