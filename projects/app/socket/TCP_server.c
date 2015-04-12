@@ -17,17 +17,17 @@
 #include <time.h>
 #define ERR(x) {perror(x);exit(errno);}
 #define BUFSIZE 1024
-#define SENDSIZE 1024
+#define CMDSIZE 512
 #define MAXCONNECT 10
 
 int client_fd,*client_count;
 socklen_t client_len;
-char cmd[SENDSIZE];
+char cmd[CMDSIZE];
 char buf[BUFSIZE];
 
 char *getarg(const char *s) //此函数返回s中的第二段非空字符串
 {
-    static char arg[SENDSIZE];
+    static char arg[CMDSIZE];
     int i=0,j=0;
     
     while(s[i] != ' ')
@@ -44,6 +44,64 @@ char *getarg(const char *s) //此函数返回s中的第二段非空字符串
     }
     
     return arg;
+}
+
+int cmd_help()
+{
+    if(send(client_fd,"Usage:\n\thelp\n\tlist\n\tget <file>\n\tput <file>\n\tquit\n",CMDSIZE,0) == -1){
+        perror("send help");
+    }
+    return 0;
+}
+
+int filter(const struct dirent *d)
+{
+    return 1;
+}
+
+int cmd_list()
+{
+    int count,i;
+    struct dirent **namelist;
+    
+    count = scandir(".",&namelist,filter,alphasort);
+    if(count == -1){
+        perror("scandir");
+    }
+    for(i=0;i<count;i++){
+        sprintf(buf,"%s ",namelist[i]->d_name);
+    if(send(client_fd,buf,BUFSIZE,0) == -1)
+        perror("send list");
+    }
+    
+    return 0;
+}
+
+int cmd_get()
+{
+    return 0;
+}
+
+int cmd_put()
+{
+    return 0;
+}
+
+
+int dispatch() //根据cmd分派任务
+{
+    if(strncmp(cmd,"help",4) == 0)
+        cmd_help();
+    else if(strncmp(cmd,"list",4) == 0)
+        cmd_list();
+    else if(strncmp(cmd,"get",3) == 0)
+        cmd_get();
+    else if(strncmp(cmd,"out",3) == 0)
+        cmd_put();
+    else if(send(client_fd,"Unknown command\nInput \"help\" for more information\n",CMDSIZE,0) == -1){
+        ERR("send Unknown command");
+    }
+    return 0;
 }
 
 void *set_client_count(const char *filename)    //实现连接计数器
@@ -68,44 +126,6 @@ void *set_client_count(const char *filename)    //实现连接计数器
 }
 
 
-void cmd_help()
-{
-    if(send(client_fd,"Usage:\n\thelp\n\tlist\n\tget <file>\n\tput <file>\n\tquit\n",SENDSIZE,0) == -1){
-        ERR("send help");
-    }
-}
-
-void cmd_list()
-{
-    
-}
-
-void cmd_get()
-{
-    
-}
-
-void cmd_put()
-{
-    
-}
-
-
-int dispatch() //根据cmd分派任务
-{
-    if(strncmp(cmd,"help",4) == 0)
-        cmd_help();
-    else if(strncmp(cmd,"list",4) == 0)
-        cmd_list();
-    else if(strncmp(cmd,"get",3) == 0)
-        cmd_get();
-    else if(strncmp(cmd,"out",3) == 0)
-        cmd_put();
-    else if(send(client_fd,"Unknown command\nInput \"help\" for more information\n",SENDSIZE,0) == -1){
-        ERR("send Unknown command");
-    }
-    return 0;
-}
 
 int main(int argc,const char **argv)
 {
@@ -154,18 +174,18 @@ Listen:
     (*client_count)++;
     time(&timestamp);
     showtime = localtime(&timestamp);
-    printf("%02d:%02d:%02d - %d client connected\n",showtime->tm_hour,showtime->tm_min,showtime->tm_sec,*client_count);
+    printf("%02d:%02d:%02d -- %d client connected\n",showtime->tm_hour,showtime->tm_min,showtime->tm_sec,*client_count);
     
     cpid = fork();  //开辟子进程与客户端通信
     if(cpid == -1){
         ERR("fork");
     }
     else if(cpid == 0){
-        if(send(client_fd,"Welcome to Johnny's server!\n\nPlease input a command.\n",SENDSIZE,0) == -1){
+        if(send(client_fd,"Welcome to Johnny's server!\n\nPlease input a command.\n",CMDSIZE,0) == -1){
             ERR("send welcome");
         }
         while(strncmp(cmd,"quit",4) != 0){
-            while(recv(client_fd,cmd,SENDSIZE,0) == -1);
+            while(recv(client_fd,cmd,CMDSIZE,0) == -1);
             dispatch();
         }
         close(client_fd);
@@ -173,7 +193,7 @@ Listen:
         printf("Client quit.\n");
         time(&timestamp);
         showtime = localtime(&timestamp);
-        printf("%02d:%02d:%02d - %d client connected\n",showtime->tm_hour,showtime->tm_min,showtime->tm_sec,*client_count);
+        printf("%02d:%02d:%02d -- %d client connected\n",showtime->tm_hour,showtime->tm_min,showtime->tm_sec,*client_count);
         return 0;
     }
     else{
