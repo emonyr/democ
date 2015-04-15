@@ -9,17 +9,18 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <dirent.h>
+#include <fcntl.h>
 #define ERR(x) {perror(x);exit(errno);}
 #define CMDSIZE 512
 #define BUFSIZE 1024
 
 int sockfd;
 char cmd[CMDSIZE];
+char arg[CMDSIZE];
 char buf[BUFSIZE];
 
 char *getarg(const char *s) //此函数返回s中的第二段非空字符串
 {
-    static char arg[CMDSIZE];
     int i=0,j=0;
     
     while(s[i] != ' ')
@@ -49,43 +50,53 @@ int cmd_help()
 
 int cmd_list()
 {
-    while(recv(sockfd,buf,BUFSIZE,0)){
-        printf("%s\n",buf);
-    }
+    while(write(1,buf,BUFSIZE,0));
+
     return 0;
 }
 
 int cmd_get()
 {
-	FILE *content;
+	int content,sval;
+    getarg(cmd);
 	
-	while(recv(sockfd,buf,BUFSIZE,0)){
-		if(strcmp(buf,"file doesn't exist.\n") == 0 ){
-			printf("file doesn't exist.\n");
-			break;
-		}
-		content = fopen(getarg(cmd),"a+");
-		fwrite(buf,BUFSIZE,1,content);
-		fclose(content);
-	}
-	printf("file downloaded\n");
+    umask(0);
+    content = open(arg,O_RDWR|O_APPEND|O_CREAT|O_TRUNC,0666);
+    if(content < 0){
+        ERR("open");
+    }
+    
+    while(recv(content,buf,BUFSIZE,0));
+    printf("file downloaded\n");
+    umask(sval);
+    close(content);
 	
     return 0;
 }
 
 int cmd_put()
 {
-	FILE *content;
+	int content;
+    getarg(cmd);
+    printf("%s\n",arg);
 	
-	content = fopen(getarg(cmd),"r");
-	if(content == NULL){
-		ERR("fopen");
+    recv(sockfd,buf,BUFSIZE,0);
+    if(strcmp(buf,"failed to create file on server.\n") == 0){
+        printf("failed to create file on server.\n");
+        return -1;
+    }
+    
+	content = open(arg,O_RDONLY);
+	if(content < 0){
+		ERR("open");
 	}
-	while(fread(buf,BUFSIZE,1,content)){
+	while(lseek(content,0,SEEK_CUR) != SEEK_END){
+        read(content,buf,BUFSIZE);
 		if(send(sockfd,buf,BUFSIZE,0) == -1)
         perror("send file");
 	}
 	printf("file sent.\n");
+    close(content);
 	
     return 0;
 }
@@ -98,7 +109,7 @@ int dispatch() //根据cmd分派任务
         cmd_list();
     else if(strncmp(cmd,"get",3) == 0)
         cmd_get();
-    else if(strncmp(cmd,"out",3) == 0)
+    else if(strncmp(cmd,"put",3) == 0)
         cmd_put();
     else{
         if(recv(sockfd,buf,BUFSIZE,0) == -1){
