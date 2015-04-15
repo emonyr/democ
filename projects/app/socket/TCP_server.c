@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <time.h>
+#include <fcntl.h>
 #define ERR(x) {perror(x);exit(errno);}
 #define BUFSIZE 1024
 #define CMDSIZE 512
@@ -23,11 +24,12 @@
 int client_fd,*client_count;
 socklen_t client_len;
 char cmd[CMDSIZE];
+char arg[CMDSIZE];
 char buf[BUFSIZE];
+
 
 char *getarg(const char *s) //此函数返回s中的第二段非空字符串
 {
-    static char arg[CMDSIZE];
     int i=0,j=0;
     
     while(s[i] != ' ')
@@ -69,9 +71,7 @@ int cmd_list()
         perror("scandir");
     }
     for(i=0;i<count;i++){
-        sprintf(buf,"%s ",namelist[i]->d_name);
-    if(send(client_fd,buf,BUFSIZE,0) == -1)
-        perror("send list");
+        send(client_fd,namelist[i]->d_name,BUFSIZE,0);
     }
     
     return 0;
@@ -79,33 +79,42 @@ int cmd_list()
 
 int cmd_get()
 {
-	FILE *content;
+	int content,sval;
+    getarg(cmd);
 	
-	content = fopen(getarg(cmd),"r");
-	if(content == NULL){
+    umask(0);
+	content = open(arg,O_RDONLY,0666);
+	if(content < 0){
 		send(client_fd,"file doesn't exist.\n",BUFSIZE,0);
+        close(content);
+        exit(1);
 	}
-	while(fread(buf,BUFSIZE,1,content)){
-		if(send(client_fd,buf,BUFSIZE,0) == -1)
-        perror("send file");
-	}
-	
+	while(lseek(content,0,SEEK_CUR) != SEEK_END){
+        read(content,buf,BUFSIZE);
+        if(send(client_fd,buf,BUFSIZE,0) == -1)
+            perror("send file");
+    }
+    umask(sval);
+    close(content);
+    
     return 0;
 }
 
 int cmd_put()
 {
-	FILE *content;
+	int content,sval;
+    getarg(cmd);
 	
-	while(recv(client_fd,buf,BUFSIZE,0)){
-		if(strcmp(buf,"file doesn't exist.\n") == 0 ){
-			printf("file doesn't exist.\n");
-			break;
-		}
-		content = fopen(getarg(cmd),"a+");
-		fwrite(buf,BUFSIZE,1,content);
-		fclose(content);
-	}
+    umask(0);
+    content = open(arg,O_RDWR|O_APPEND|O_CREAT|O_TRUNC,0666);
+    if(content < 0){
+        send(client_fd,"failed to create file on server.\n",BUFSIZE,0);
+        exit(1);
+    }
+    
+    while(recv(content,buf,BUFSIZE,0));
+    umask(sval);
+    close(content);
 	
     return 0;
 }
@@ -119,7 +128,7 @@ int dispatch() //根据cmd分派任务
         cmd_list();
     else if(strncmp(cmd,"get",3) == 0)
         cmd_get();
-    else if(strncmp(cmd,"out",3) == 0)
+    else if(strncmp(cmd,"put",3) == 0)
         cmd_put();
     else if(send(client_fd,"Unknown command\nInput \"help\" for more information\n",CMDSIZE,0) == -1){
         ERR("send Unknown command");
