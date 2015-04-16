@@ -38,9 +38,9 @@ char *getarg(const char *s) //此函数返回s中的第二段非空字符串
         i++;
     
     memset(arg,0,sizeof(arg));
-    while(s[i])
+    while(s[i] != '\n')
         arg[j++] = s[i++];
-    
+
     if(j == 0){
         printf("getarg failed: void arg\n");exit(1);
     }
@@ -73,27 +73,29 @@ int cmd_list()
     for(i=0;i<count;i++){
         send(client_fd,namelist[i]->d_name,BUFSIZE,0);
     }
-    
+	send(client_fd,"EOF",4,0);    
+
     return 0;
 }
 
 int cmd_get()
 {
 	int content,sval;
-    getarg(cmd);
+	getarg(cmd);
 	
-    umask(0);
+	umask(0);
 	content = open(arg,O_RDONLY,0666);
 	if(content < 0){
 		send(client_fd,"file doesn't exist.\n",BUFSIZE,0);
         close(content);
         exit(1);
 	}
-	while(lseek(content,0,SEEK_CUR) != SEEK_END){
-        read(content,buf,BUFSIZE);
-        if(send(client_fd,buf,BUFSIZE,0) == -1)
+	while(!EOF){
+        	read(content,buf,BUFSIZE);
+        	if(send(client_fd,buf,BUFSIZE,0) == -1)
             perror("send file");
-    }
+	}
+
     umask(sval);
     close(content);
     
@@ -112,7 +114,9 @@ int cmd_put()
         exit(1);
     }
     
-    while(recv(content,buf,BUFSIZE,0));
+	while(recv(client_fd,buf,BUFSIZE,0)){
+		write(content,buf,BUFSIZE);
+	}
     umask(sval);
     close(content);
 	

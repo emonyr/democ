@@ -29,7 +29,7 @@ char *getarg(const char *s) //此函数返回s中的第二段非空字符串
         i++;
     
     memset(arg,0,sizeof(arg));
-    while(s[i])
+    while(s[i] != '\n')
         arg[j++] = s[i++];
     
     if(j == 0){
@@ -50,7 +50,12 @@ int cmd_help()
 
 int cmd_list()
 {
-    while(write(1,buf,BUFSIZE,0));
+	while(buf){
+		recv(sockfd,buf,BUFSIZE,0);
+		if(strcmp(buf,"EOF") == 0)
+			break;
+		printf("%s\n",buf);
+	}
 
     return 0;
 }
@@ -58,18 +63,24 @@ int cmd_list()
 int cmd_get()
 {
 	int content,sval;
-    getarg(cmd);
+	getarg(cmd);
 	
-    umask(0);
-    content = open(arg,O_RDWR|O_APPEND|O_CREAT|O_TRUNC,0666);
-    if(content < 0){
-        ERR("open");
-    }
+	umask(0);
+	content = open(arg,O_RDWR|O_APPEND|O_CREAT|O_TRUNC,0666);
+	if(content < 0){
+		ERR("open");
+	}
     
-    while(recv(content,buf,BUFSIZE,0));
-    printf("file downloaded\n");
-    umask(sval);
-    close(content);
+	while(recv(sockfd,buf,BUFSIZE,0)){
+		if(strcmp(buf,"file doesn't exist.\n") == 0){
+			printf("file doesn't exist.\n");
+			return -1;
+		}
+		write(content,buf,BUFSIZE);
+	}
+	printf("file downloaded\n");
+	umask(sval);
+	close(content);
 	
     return 0;
 }
@@ -90,10 +101,10 @@ int cmd_put()
 	if(content < 0){
 		ERR("open");
 	}
-	while(lseek(content,0,SEEK_CUR) != SEEK_END){
-        read(content,buf,BUFSIZE);
+	while(!EOF){
+	        read(content,buf,BUFSIZE);
 		if(send(sockfd,buf,BUFSIZE,0) == -1)
-        perror("send file");
+        	perror("send file");
 	}
 	printf("file sent.\n");
     close(content);
@@ -166,7 +177,7 @@ int main(int argc,char **argv)
     
 	while(strncmp(cmd,"quit",4) != 0){
         dispatch();
-        printf(">");
+        printf("\n>");
 		fgets(cmd,CMDSIZE,stdin);
 		if(send(sockfd,cmd,CMDSIZE,0) == -1){
 			ERR("send cmd");
