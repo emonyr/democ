@@ -17,11 +17,11 @@
 #include <time.h>
 #include <fcntl.h>
 #define ERR(x) {perror(x);exit(errno);}
-#define BUFSIZE 1024
+#define BUFSIZE 128
 #define CMDSIZE 512
 #define MAXCONNECT 10
 
-int client_fd,*client_count;
+int client_fd,*client_count,nbyte;
 socklen_t client_len;
 char cmd[CMDSIZE];
 char arg[CMDSIZE];
@@ -71,9 +71,10 @@ int cmd_list()
         perror("scandir");
     }
     for(i=0;i<count;i++){
-        send(client_fd,namelist[i]->d_name,BUFSIZE,0);
-    }
-	send(client_fd,"EOF",4,0);    
+        if(send(client_fd,namelist[i]->d_name,BUFSIZE,0) == -1)
+		ERR("send");
+    } 
+	send(client_fd,"/EOF",5,0);
 
     return 0;
 }
@@ -90,11 +91,11 @@ int cmd_get()
         close(content);
         exit(1);
 	}
-	while(!EOF){
-        	read(content,buf,BUFSIZE);
-        	if(send(client_fd,buf,BUFSIZE,0) == -1)
+	while((nbyte = read(content,buf,BUFSIZE)) > 0){
+        	if(send(client_fd,buf,nbyte,0) == -1)
             perror("send file");
 	}
+	send(client_fd,"/EOF",5,0);
 
     umask(sval);
     close(content);
@@ -108,14 +109,15 @@ int cmd_put()
     getarg(cmd);
 	
     umask(0);
-    content = open(arg,O_RDWR|O_APPEND|O_CREAT|O_TRUNC,0666);
+    content = open(arg,O_WRONLY|O_CREAT|O_TRUNC,0666);
     if(content < 0){
         send(client_fd,"failed to create file on server.\n",BUFSIZE,0);
+	unlink(arg);
         exit(1);
     }
     
-	while(recv(client_fd,buf,BUFSIZE,0)){
-		write(content,buf,BUFSIZE);
+	while((nbyte = recv(client_fd,buf,BUFSIZE,0)) > 0){
+		write(content,buf,nbyte);
 	}
     umask(sval);
     close(content);
@@ -126,6 +128,7 @@ int cmd_put()
 
 int dispatch() //根据cmd分派任务
 {
+	memset(buf,0,sizeof(buf));
     if(strncmp(cmd,"help",4) == 0)
         cmd_help();
     else if(strncmp(cmd,"list",4) == 0)
@@ -207,7 +210,8 @@ Listen:
     do{
         client_fd = accept(server_fd,(struct sockaddr *)&client_sock,&client_len);  //等待客户端连接
     }while(client_fd == -1);
-    (*client_count)++;
+
+    (*client_count)++;	//更新连接计数器
     time(&timestamp);
     showtime = localtime(&timestamp);
     printf("%02d:%02d:%02d -- %d client connected\n",showtime->tm_hour,showtime->tm_min,showtime->tm_sec,*client_count);
@@ -217,15 +221,19 @@ Listen:
         ERR("fork");
     }
     else if(cpid == 0){
-        if(send(client_fd,"Welcome to Johnny's server!\n\nPlease input a command.\n",CMDSIZE,0) == -1){
+        if(send(client_fd,"Welcome to Johnny's server!\n\nPlease input a command.\n",sizeof("Welcome to Johnny's server!\n\nPlease input a command.\n"),0) == -1){
             ERR("send welcome");
         }
+	send(client_fd,"/EOF",5,0);
+
+	//等待client输入命令
         while(strncmp(cmd,"quit",4) != 0){
             while(recv(client_fd,cmd,CMDSIZE,0) == -1);
             dispatch();
         }
         close(client_fd);
-        (*client_count)--;
+
+        (*client_count)--;	//更新连接计数器
         printf("Client quit.\n");
         time(&timestamp);
         showtime = localtime(&timestamp);
