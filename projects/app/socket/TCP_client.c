@@ -12,9 +12,9 @@
 #include <fcntl.h>
 #define ERR(x) {perror(x);exit(errno);}
 #define CMDSIZE 512
-#define BUFSIZE 1024
+#define BUFSIZE 128
 
-int sockfd;
+int sockfd,nbyte;
 char cmd[CMDSIZE];
 char arg[CMDSIZE];
 char buf[BUFSIZE];
@@ -50,9 +50,10 @@ int cmd_help()
 
 int cmd_list()
 {
-	while(buf){
+	int total;
+	while(1){
 		recv(sockfd,buf,BUFSIZE,0);
-		if(strcmp(buf,"EOF") == 0)
+		if(strcmp(buf,"/EOF") == 0)
 			break;
 		printf("%s\n",buf);
 	}
@@ -66,19 +67,24 @@ int cmd_get()
 	getarg(cmd);
 	
 	umask(0);
-	content = open(arg,O_RDWR|O_APPEND|O_CREAT|O_TRUNC,0666);
+	content = open(arg,O_WRONLY|O_CREAT|O_TRUNC,0666);
 	if(content < 0){
 		ERR("open");
 	}
     
-	while(recv(sockfd,buf,BUFSIZE,0)){
+	while(nbyte = recv(sockfd,buf,BUFSIZE,0)){
 		if(strcmp(buf,"file doesn't exist.\n") == 0){
 			printf("file doesn't exist.\n");
 			return -1;
 		}
-		write(content,buf,BUFSIZE);
+		if(strcmp(buf,"/EOF") == 0){
+			close(content);
+			printf("file downloaded\n");
+			return 0;
+		}
+		write(content,buf,nbyte);
 	}
-	printf("file downloaded\n");
+	
 	umask(sval);
 	close(content);
 	
@@ -101,9 +107,8 @@ int cmd_put()
 	if(content < 0){
 		ERR("open");
 	}
-	while(!EOF){
-	        read(content,buf,BUFSIZE);
-		if(send(sockfd,buf,BUFSIZE,0) == -1)
+	while((nbyte = read(content,buf,BUFSIZE)) > 0){
+		if(send(sockfd,buf,nbyte,0) == -1)
         	perror("send file");
 	}
 	printf("file sent.\n");
@@ -114,6 +119,7 @@ int cmd_put()
 
 int dispatch() //根据cmd分派任务
 {
+	memset(buf,0,sizeof(buf));
     if(strncmp(cmd,"help",4) == 0)
         cmd_help();
     else if(strncmp(cmd,"list",4) == 0)
@@ -123,10 +129,12 @@ int dispatch() //根据cmd分派任务
     else if(strncmp(cmd,"put",3) == 0)
         cmd_put();
     else{
-        if(recv(sockfd,buf,BUFSIZE,0) == -1){
-            ERR("recv");
-        }
-        printf("%s\n",buf);
+	while(1){
+		recv(sockfd,buf,BUFSIZE,0);
+		if(strcmp(buf,"/EOF") == 0)
+			break;
+		printf("%s\n",buf);
+	}
     }
     return 0;
 }
