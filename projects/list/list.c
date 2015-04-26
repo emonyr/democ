@@ -69,7 +69,8 @@ int list_delete(struct list_item *delete_point,int offset)
         exit(-1);
     }
     
-    free(delete_point);
+    delete_point->next = delete_point->next->next;
+    free(delete_point->next);
 
     return 0;
 }
