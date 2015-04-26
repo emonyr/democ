@@ -95,7 +95,7 @@ int list_reverse(struct list_item *head)
     int i,len = list_len(head);
     struct list_item *tmp;
     
-    for(i=0;i<len-1;i++){
+    for(i=0;i<len-1;i++){   //len-1为了去除head
         tmp = head->next->next;
         list_insert(head->next,head,len-i);
         head->next = tmp;
