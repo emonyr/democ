@@ -16,12 +16,10 @@ int main()
     
     list_reverse(head);
     list_show(head);
-    /*
-    do{
-        list_delete(head,i);
-    }while(i--);
-    
+
+    while(head->next != NULL)
+        list_delete(head,0);
     list_show(head);
-    */
+
     return 0;
 }
