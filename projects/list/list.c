@@ -103,19 +103,3 @@ int list_reverse(struct list_item *head)
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
