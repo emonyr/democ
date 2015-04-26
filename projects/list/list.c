@@ -74,7 +74,7 @@ int list_delete(struct list_item *delete_point,int offset)
     return 0;
 }
 
-//测量链表长度(不包含head)
+//测量链表长度(包含head)
 int list_len(struct list_item *head)
 {
     int len = 0;
@@ -92,22 +92,13 @@ int list_len(struct list_item *head)
 //翻转链表
 int list_reverse(struct list_item *head)
 {
-    int i = 0,len = list_len(head);
+    int i,len = list_len(head);
     struct list_item *tmp;
-    struct list_item *old_list[len];
     
-    tmp = head;
-    while(tmp->next != NULL){
-        old_list[i++] = tmp->next;
-        tmp = tmp->next;
-    }
-    //更新原连表头
-    head->next = old_list[--i];
-    printf("%d\n",i);
-    //更新原链表所有项
-    while(i){
-        old_list[i]->next = old_list[i-1];
-        i--;
+    for(i=0;i<len-1;i++){
+        tmp = head->next->next;
+        list_insert(head->next,head,len-i);
+        head->next = tmp;
     }
 
     return 0;
