@@ -52,7 +52,7 @@ int list_insert(struct list_item *new_item,struct list_item *insert_point,int of
     return 0;
 }
 
-//删除从delete_point偏移offset的链表项
+//输入地址偏移offset后删除delete_point->next
 int list_delete(struct list_item *delete_point,int offset)
 {
     if(!delete_point){
