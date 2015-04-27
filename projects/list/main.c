@@ -10,7 +10,7 @@ int main()
     printf("\n");
     
     printf("list_new_item\n");
-    for(i=0;i<10;i++){
+    for(i=0;i<5;i++){
         list_insert(list_new_item(i+1),head,0);
     }
     list_show(head);
@@ -18,9 +18,17 @@ int main()
     printf("list_reverse\n");
     list_reverse(head);
     list_show(head);
-
+    
+    printf("list_reverse\n");
+    list_reverse(head);
+    list_show(head);
+    
+    printf("list_data_ascending\n");
+    list_data_ascending(head);
+    list_show(head);
+    
     printf("list_delete\n");
-    //while(head->next != NULL)
+    while(head->next != NULL)
         list_delete(head,0);
     list_show(head);
 
