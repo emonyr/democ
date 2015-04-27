@@ -55,6 +55,7 @@ int list_insert(struct list_item *new_item,struct list_item *insert_point,int of
 //输入地址偏移offset后删除delete_point->next
 int list_delete(struct list_item *delete_point,int offset)
 {
+    struct list_item *tmp;
     if(!delete_point){
         fprintf(stderr,"delete_point is invalid\n");
         exit(-1);
@@ -69,8 +70,9 @@ int list_delete(struct list_item *delete_point,int offset)
         exit(-1);
     }
     
+    tmp = delete_point->next;
     delete_point->next = delete_point->next->next;
-    free(delete_point->next);
+    free(tmp);
 
     return 0;
 }
