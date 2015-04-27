@@ -22,7 +22,7 @@ struct list_item *list_new_item(int data)
 int list_show(struct list_item *origin)
 {
     while(origin != NULL){
-        printf("%p data: %d\n",origin,origin->data);
+        printf("%p data: %d next: %p \n",origin,origin->data,origin->next);
         origin = origin->next;
     }
     
@@ -32,7 +32,7 @@ int list_show(struct list_item *origin)
 //把new_item插入到距离insert_point偏移offset的链表项后面
 int list_insert(struct list_item *new_item,struct list_item *insert_point,int offset)
 {
-    if(!insert_point){
+    if((insert_point == NULL) || (new_item == insert_point)){
         fprintf(stderr,"insert_point is invalid\n");
         exit(-1);
     }
@@ -77,7 +77,7 @@ int list_delete(struct list_item *delete_point,int offset)
     return 0;
 }
 
-//测量链表长度(包含head)
+//测量链表长度(不包含head)
 int list_len(struct list_item *head)
 {
     int len = 0;
@@ -98,11 +98,36 @@ int list_reverse(struct list_item *head)
     int i,len = list_len(head);
     struct list_item *tmp;
     
-    for(i=0;i<len-1;i++){   //len-1为了去除head
+    for(i=0;i<len-1;i++){   //因为i从0开始，所以用len-1判断链表终结
         tmp = head->next->next;
         list_insert(head->next,head,len-i);
         head->next = tmp;
     }
 
+    return 0;
+}
+
+//按data升序排列链表
+int list_data_ascending(struct list_item *head)
+{
+    struct list_item *min,*tmp;
+    
+    while(head->next != NULL){
+        min = head;
+        tmp = min->next;
+        
+        while(tmp->next != NULL){
+            if(min->next->data > tmp->next->data)
+                min = tmp;
+            tmp = tmp->next;
+        }
+        if(min != head){
+            tmp = min->next->next;
+            list_insert(min->next,head,0);
+            min->next = tmp;
+        }
+        head = head->next;
+    }
+    
     return 0;
 }
