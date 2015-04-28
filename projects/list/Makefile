@@ -8,5 +8,5 @@ joseph : joseph_circle.o list.o
 	gcc -I. -c $^
 
 clean :
-	rm -f *.o build
+	rm -f *.o build joseph
 
