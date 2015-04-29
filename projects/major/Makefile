@@ -44,7 +44,7 @@ $(BUILD) : $(COMPONENT)
 	$(CC) $(CFLAGS) -c $^
 
 clean:
-	rm -f *.o $(TARGET) $(COMPONENT) *.TMP
+	rm -f *.o $(TARGET) $(BUILD) $(COMPONENT) *.TMP
 
 
 
