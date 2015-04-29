@@ -1,13 +1,17 @@
 #Makefile designed for major project
 
-ENV				?= SD
+ENV			?= SD
 
 TARGET			:= start.bin
+BUILD			:= start
+COMPONENT		+= main.o
 COMPONENT		+= start.o
 
-CROSS_COMPILE	:= arm-linux-
-CC				:= $(CROSS_COMPILE)gcc
-LD				:= $(CROSS_COMPILE)ld
+SDTOOL			:= ./mkv210_image
+
+CROSS_COMPILE		:= arm-linux-
+CC			:= $(CROSS_COMPILE)gcc
+LD			:= $(CROSS_COMPILE)ld
 OBJCOPY			:= $(CROSS_COMPILE)objcopy
 
 USER_HEADER		:= ./include
@@ -20,22 +24,27 @@ endif
 
 
 
-
-
-
 #compile command
 
 All : $(TARGET)
-$(TARGET) : $(COMPONENT)
-	$(LD) $(CFLAGS) $(LDFLAGS) -o $@ $^
+$(TARGET) : $(BUILD)
+ifeq ($(ENV),RAM)
+	$(OBJCOPY) -O binary $^ $@
+else
+	$(OBJCOPY) -O binary $^ $@.TMP
+	$(SDTOOL) $@.TMP $@
+endif
 
+
+$(BUILD) : $(COMPONENT)
+	$(LD) $(LDFLAGS) -o $@ $^
 %.o : %.c
-	$(CC) $(CFLAGS) -c $@ $^
+	$(CC) $(CFLAGS) -c $^
 %.o : %.S
-	$(CC) $(CFLAGS) -c $@ $^
+	$(CC) $(CFLAGS) -c $^
 
 clean:
-	rm -f *.o $(TARGET) $(COMPONENT)
+	rm -f *.o $(TARGET) $(COMPONENT) *.TMP
 
 
 
