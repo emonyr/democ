@@ -12,28 +12,28 @@
 //新建数据为data的链表项
 struct list_item *list_new_item(int data)
 {
-    struct list_item *new_item;
-    new_item = (struct list_item *)malloc(sizeof(struct list_item));
-    if(!new_item){
-        fprintf(stderr,"list_init failed\n");
-        exit(-1);
-    }
-    new_item->data = data;
-    new_item->next = NULL;
+	struct list_item *new_item;
+	new_item = (struct list_item *)malloc(sizeof(struct list_item));
+	if(!new_item){
+		fprintf(stderr,"list_init failed\n");
+		exit(-1);
+	}
+	new_item->data = data;
+	new_item->next = NULL;
     
-    return new_item;
+	return new_item;
 }
 
 //显示从输入的链表地址开始直到链表结束的每一项信息
 int list_show(struct list_item *head)
 {
 	int len = list_len(head);
-    while(len--){
-        printf("%p data: %d next: %p \n",head,head->data,head->next);
-        head = head->next;
-    }
+	while(len--){
+		printf("%p data: %d next: %p \n",head,head->data,head->next);
+		head = head->next;
+	}
     
-    return 0;
+	return 0;
 }
 
 //把new_item插入到insert_point偏移offset项的链表项后面
@@ -94,10 +94,10 @@ int list_len(struct list_item *head)
     
     tmp = head;
     while((tmp != NULL)){
-        tmp = tmp->next;
-        len++;
-		if(tmp == head)
-			break;
+	tmp = tmp->next;
+	len++;
+	if(tmp == head)
+		break;
     }
     
     return len;
@@ -111,11 +111,11 @@ int list_reverse(struct list_item **head)
 	
 	tail = *head;
 	tmp2 = (*head)->next;
-    for(i=0;i<len-1;i++){
-        tmp1 = tmp2;
+	for(i=0;i<len-1;i++){
+		tmp1 = tmp2;
 		tmp2 = tmp2->next;
 		tmp1->next = *head;
-        *head = tmp1;
+		*head = tmp1;
     }
 	tail->next = *head;
 	if(tmp2 == NULL)
@@ -128,24 +128,24 @@ int list_reverse(struct list_item **head)
 int list_data_ascending(struct list_item *head)
 {
 	int len = list_len(head);
-    struct list_item *min,*tmp;
+	struct list_item *min,*tmp;
     
-    while(--len){
-        min = head;
-        tmp = min->next;
+	while(--len){
+		min = head;
+		tmp = min->next;
         
-        while(tmp->next != NULL){
-            if(min->next->data > tmp->next->data)
-                min = tmp;
-            tmp = tmp->next;
-        }
-        if(min != head){
-            tmp = min->next->next;
-            list_insert(min->next,head,0);
-            min->next = tmp;
-        }
-        head = head->next;
-    }
+		while(tmp->next != NULL){
+			if(min->next->data > tmp->next->data)
+				min = tmp;
+			tmp = tmp->next;
+        	}
+        	if(min != head){
+			tmp = min->next->next;
+			list_insert(min->next,head,0);
+			min->next = tmp;
+        	}
+		head = head->next;
+	}
     
     return 0;
 }
