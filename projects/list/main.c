@@ -8,6 +8,7 @@ int main()
 	head1 = list_new_item(0);
 	head2 = list_new_item(0);
 	list_show(head1);
+	list_reverse(&head1);
 	list_show(head2);
 	printf("\n");
     
@@ -16,23 +17,27 @@ int main()
 		list_insert(list_new_item(i),head1,0);
 	}
 	list_show(head1);
+	printf("%d\n",list_len(head1));
     
-    	for(i=6;i<=10;i++){
-        	list_insert(list_new_item(i),head2,0);
-    	}
-    	list_show(head2);
+    for(i=6;i<=10;i++){
+    	list_insert(list_new_item(i),head2,0);
+    }
+    list_show(head2);
+	printf("%d\n",list_len(head2));
 
-    	printf("list_reverse\n");
-    	list_reverse(head1);
-    	list_show(head1);
+    printf("list_reverse\n");
+    list_reverse(&head1);
+    list_show(head1);
+	printf("%d\n",list_len(head1));
     
-    	printf("list_reverse\n");
-    	list_reverse(head1);
-    	list_show(head1);
+    printf("list_reverse\n");
+    list_reverse(&head1);
+    list_show(head1);
+	printf("%d\n",list_len(head1));
     
-    	printf("list_data_ascending\n");
-    	list_data_ascending(head1);
-    	list_show(head1);
+    printf("list_data_ascending\n");
+    list_data_ascending(head1);
+    list_show(head1);
     
 	printf("merge head1 & head2\n");
 	tmp = head1;
@@ -42,10 +47,10 @@ int main()
 	list_data_ascending(head1);
 	list_show(head1);
 
-    	printf("list_delete\n");
-    	while(head1->next != NULL)
-        	list_delete(head1,0);
-    	list_show(head1);
+    printf("list_delete\n");
+    while(head1->next != NULL)
+    	list_delete(head1,0);
+    list_show(head1);
 
     	return 0;
 }

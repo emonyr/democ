@@ -12,7 +12,8 @@ int main()
 	head->next = head;
 	for(i=2;i<=n;i++)
 		list_insert(list_new_item(i),head,i-2);
-
+	list_show(head);
+	printf("%d\n",list_len(head));
 
 	//把head移动到第k项
 	for(i=1;i<k;i++)

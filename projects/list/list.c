@@ -1,3 +1,9 @@
+/*
+ *	Designed by Johnny Yang
+ *	所有函数均适用于单双向链表
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -19,29 +25,32 @@ struct list_item *list_new_item(int data)
 }
 
 //显示从输入的链表地址开始直到链表结束的每一项信息
-int list_show(struct list_item *origin)
+int list_show(struct list_item *head)
 {
-    while(origin != NULL){
-        printf("%p data: %d next: %p \n",origin,origin->data,origin->next);
-        origin = origin->next;
+	int len = list_len(head);
+    while(len--){
+        printf("%p data: %d next: %p \n",head,head->data,head->next);
+        head = head->next;
     }
     
     return 0;
 }
 
-//把new_item插入到距离insert_point偏移offset的链表项后面
+//把new_item插入到insert_point偏移offset项的链表项后面
 int list_insert(struct list_item *new_item,struct list_item *insert_point,int offset)
 {
-    if((insert_point == NULL) || (new_item == insert_point)){
+    if(insert_point == NULL){
         fprintf(stderr,"insert_point is invalid\n");
         exit(-1);
     }
+	if((new_item == insert_point) && (offset == 0))
+		return 0;
 
     while((insert_point->next != NULL) && (offset > 0)){
         insert_point = insert_point->next;
         offset--;
     }
-    if(offset){
+    if(offset != 0){
         fprintf(stderr,"offset is invalid\n");
         exit(-1);
     }
@@ -52,7 +61,7 @@ int list_insert(struct list_item *new_item,struct list_item *insert_point,int of
     return 0;
 }
 
-//输入地址偏移offset后删除delete_point->next
+//输入地址偏移offset项后删除delete_point->next
 int list_delete(struct list_item *delete_point,int offset)
 {
     struct list_item *tmp;
@@ -77,42 +86,51 @@ int list_delete(struct list_item *delete_point,int offset)
     return 0;
 }
 
-//测量链表长度(不包含head)
+//测量链表长度
 int list_len(struct list_item *head)
 {
     int len = 0;
     struct list_item *tmp;
     
     tmp = head;
-    while((tmp->next != NULL)){
+    while((tmp != NULL)){
         tmp = tmp->next;
         len++;
+		if(tmp == head)
+			break;
     }
     
     return len;
 }
 
 //翻转链表
-int list_reverse(struct list_item *head)
+int list_reverse(struct list_item **head)
 {
-    int i,len = list_len(head);
-    struct list_item *tmp;
-    
-    for(i=0;i<len-1;i++){   //因为i从0开始，所以用len-1判断链表终结
-        tmp = head->next->next;
-        list_insert(head->next,head,len-i);
-        head->next = tmp;
+    int i,len = list_len(*head);
+    struct list_item *tmp1,*tmp2,*tail;
+	
+	tail = *head;
+	tmp2 = (*head)->next;
+    for(i=0;i<len-1;i++){
+        tmp1 = tmp2;
+		tmp2 = tmp2->next;
+		tmp1->next = *head;
+        *head = tmp1;
     }
-
+	tail->next = *head;
+	if(tmp2 == NULL)
+		tail->next = NULL;
+	
     return 0;
 }
 
 //按data升序排列链表
 int list_data_ascending(struct list_item *head)
 {
+	int len = list_len(head);
     struct list_item *min,*tmp;
     
-    while(head->next != NULL){
+    while(--len){
         min = head;
         tmp = min->next;
         
