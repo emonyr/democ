@@ -106,12 +106,12 @@ int list_len(struct list_item *head)
 //翻转链表
 int list_reverse(struct list_item **head)
 {
-    int i,len = list_len(*head);
+    int len = list_len(*head);
     struct list_item *tmp1,*tmp2,*tail;
 	
 	tail = *head;
 	tmp2 = (*head)->next;
-	for(i=0;i<len-1;i++){
+	while(--len){
 		tmp1 = tmp2;
 		tmp2 = tmp2->next;
 		tmp1->next = *head;
