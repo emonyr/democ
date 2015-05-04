@@ -8,6 +8,7 @@ COMPONENT		+= main.o
 COMPONENT		+= start.o
 
 SDTOOL			:= ./mkv210_image
+LINKER_SCRIPT	:= -Tmap.lds
 
 CROSS_COMPILE		:= arm-linux-
 CC			:= $(CROSS_COMPILE)gcc
@@ -37,11 +38,11 @@ endif
 
 
 $(BUILD) : $(COMPONENT)
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(LD) $(LINKER_SCRIPT) $(LDFLAGS) -o $@ $^
 %.o : %.c
-	$(CC) $(CFLAGS) -c $^
+	$(CC) $(CFLAGS) -c -o $@ $^
 %.o : %.S
-	$(CC) $(CFLAGS) -c $^
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 clean:
 	rm -f *.o $(TARGET) $(BUILD) $(COMPONENT) *.TMP
