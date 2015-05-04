@@ -15,6 +15,7 @@ int main()
 			GPJ2DAT_0 = 0;
 			mydelay(100000);
 			GPJ2DAT_0 = 0xf;
+			mydelay(100000);
 		}
 	return 0;
 }

@@ -8,7 +8,7 @@ COMPONENT		+= main.o
 COMPONENT		+= start.o
 
 SDTOOL			:= ./mkv210_image
-LINKER_SCRIPT	:= -Tmap.lds
+LINKER_SCRIPT		:= -Tmap.lds
 
 CROSS_COMPILE		:= arm-linux-
 CC			:= $(CROSS_COMPILE)gcc
