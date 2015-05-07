@@ -1,22 +1,13 @@
-/*
- * (C) Copyright 2009 Samsung Electronics
- * Minkyu Kang <mk7.kang@samsung.com>
- * Heungjun Kim <riverful.kim@samsung.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
- */
+#ifndef UART_H
+#define UART_H
 
-#ifndef __ASM_ARCH_UART_H_
-#define __ASM_ARCH_UART_H_
-
-#ifndef __ASSEMBLY__
 /* baudrate rest value */
 union br_rest {
 	unsigned short	slot;		/* udivslot */
 	unsigned char	value;		/* ufracval */
 };
 
-struct s5p_uart {
+struct s5p_uart_bank {
 	unsigned int	ulcon;
 	unsigned int	ucon;
 	unsigned int	ufcon;
@@ -39,6 +30,18 @@ static inline int s5p_uart_divslot(void)
 	return 1;
 }
 
-#endif	/* __ASSEMBLY__ */
+struct s5p_uart {
+	struct s5p_uart_bank uart0;
+	struct s5p_uart_bank uart1;
+	struct s5p_uart_bank uart2;
+	struct s5p_uart_bank uart3;
+};
+
+void uart_init(void);
+
+void uputc(char c);
+
+void uputs(const char *str);
+
 
 #endif

@@ -1,5 +1,6 @@
-#define GPJ2CON_0 (*(volatile unsigned long *)0xE0200280)
-#define GPJ2DAT_0 (*(volatile unsigned long *)0xE0200284)
+#include "gpio.h"
+#include "cpu.h"
+#include "uart.h"
 
 void mydelay(int input)
 {
@@ -9,13 +10,13 @@ void mydelay(int input)
 
 int main()
 {
-		GPJ2CON_0 = 0x00000011;
-		
-		while(1){
-			GPJ2DAT_0 = 0;
-			mydelay(100000);
-			GPJ2DAT_0 = 0xf;
-			mydelay(100000);
-		}
+	struct s5p_gpio *gpio_base = (struct s5p_gpio *)S5PV210_GPIO_BASE;
+	gpio_base->gpj2.con = 0x00000011;
+	while(1){
+		gpio_base->gpj2.dat = 0;
+		mydelay(100000);
+		gpio_base->gpj2.dat = 0xf;
+		mydelay(100000);
+	}
 	return 0;
 }
