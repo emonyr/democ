@@ -6,6 +6,7 @@ TARGET			:= start.bin
 BUILD			:= start
 COMPONENT		+= main.o
 COMPONENT		+= start.o
+COMPONENT		+= uart.o
 
 SDTOOL			:= ./mkv210_image
 LINKER_SCRIPT		:= -Tmap.lds
@@ -17,7 +18,7 @@ OBJCOPY			:= $(CROSS_COMPILE)objcopy
 
 USER_HEADER		:= ./include
 CFLAGS			:= -Wall -I$(USER_HEADER)
-LDFLAGS			?= -Ttext=0x0
+LDFLAGS			?= -Ttext=0xD0020010
 ifeq ($(ENV),RAM)
 LDFLAGS			:= -Ttext=0x20000000
 endif
