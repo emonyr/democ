@@ -27,5 +27,10 @@ void uputc(char c);
 
 void uputs(const char *str);
 
+void ugetc(void);
+
+void ugets(void);
+
+
 
 #endif

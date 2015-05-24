@@ -46,3 +46,32 @@ void uputs(const char *str)
 
 }
 
+void ugetc(void)
+{
+	char c;
+	struct s5pv2xx_uart *uart_base = (struct s5pv2xx_uart *)S5PV210_UART_BASE;
+	while(!(__REG(&uart_base->utrstat) & (0x1<<0)));
+
+	c = readb(&uart_base->urxh);
+
+	uputc(c);	//»ØÏÔ
+}
+
+void ugets(void)
+{
+	struct s5pv2xx_uart *uart_base = (struct s5pv2xx_uart *)S5PV210_UART_BASE;
+
+	uputs("uputs:\n");
+	while(!(__REG(&uart_base->utrstat) & (0x1<<0)));
+	ugetc();
+	
+	while(readb(&uart_base->urxh) != '0'){
+		ugetc();
+	}
+	uputs("exit uputs\n");
+}
+
+
+
+
+

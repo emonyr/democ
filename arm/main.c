@@ -11,10 +11,7 @@ void mydelay(int input)
 int main()
 {
 	uart_init();
-	uputc('H');
-	uputc('i');
-	uputc('\n');
-	uputs("Hello\n");
+	ugets();
 
 	return 0;
 }
