@@ -1,2 +1,2 @@
 #!/bin/bash
-sudo dd seek=1 if=./start.bin of=/dev/sdb1
+sudo dd seek=1 if=$1 of=$2
