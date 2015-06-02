@@ -5,6 +5,8 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -47,6 +49,25 @@ char *getarg(const char *s) //此函数返回s中的第二段非空字符串
     return arg;
 }
 
+
+int wait_for_input(int fd,int time)
+{
+
+	fd_set readfds;
+	struct timeval tv;
+
+	//设置select fd_set
+	FD_ZERO(&readfds);
+	FD_SET(client_fd,&readfds);
+	//等待10分钟
+	tv.tv_sec = time;
+	tv.tv_usec = 0;
+
+	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
+
+}
+
+
 int cmd_help()
 {
     if(send(client_fd,"Usage:\n\thelp\n\tlist\n\tget <file>\n\tput <file>\n\tquit\n",BUFSIZE,0) == -1)
@@ -54,10 +75,16 @@ int cmd_help()
     return 0;
 }
 
+
 int filter(const struct dirent *d)
 {
-    return 1;
+	if((strcmp(d->d_name, ".") == 0) || (strcmp(d->d_name, "..") == 0) || (d->d_name == NULL)){
+		return 0;
+	}
+	else
+		return 1;
 }
+
 
 int cmd_list()
 {
@@ -67,15 +94,16 @@ int cmd_list()
     if((count = scandir(".",&namelist,filter,alphasort)) == -1)
         perror("scandir");
     for(i=0;i<count;i++){
-		if ((strcmp(namelist[i]->d_name, ".") == 0) || (strcmp(namelist[i]->d_name, "..") == 0) || (namelist[i]->d_name == NULL))
-			continue;
-		strcpy(buf,namelist[i]->d_name);
-        if(send(client_fd,buf,BUFSIZE,0) == -1)
+	strcpy(buf,namelist[i]->d_name);
+	if(send(client_fd,buf,BUFSIZE,0) == -1)
 			ERR("send");
+	free(namelist[i]);
     }
+	free(namelist);
 
     return 0;
 }
+
 
 int cmd_get()
 {
@@ -89,16 +117,20 @@ int cmd_get()
         close(content);
         exit(1);
 	}
+	else
+		send(client_fd,"ready to transfer",BUFSIZE,0);
+
 	while((nbyte = read(content,buf,BUFSIZE)) != 0){
         	if(send(client_fd,buf,nbyte,0) == -1)
 				perror("send file");
 	}
 	
-    close(content);
+	close(content);
 	umask(sval);
     
     return 0;
 }
+
 
 int cmd_put()
 {
@@ -114,12 +146,16 @@ int cmd_put()
     }
 	else
 		send(client_fd,"Transferring file.\n",BUFSIZE,0);
-    
-	while((nbyte = recv(client_fd,buf,BUFSIZE,0)) != 0){
+
+	nbyte = recv(client_fd,buf,BUFSIZE,0);
+	printf("%s\n",buf);
+
+	while(wait_for_input(client_fd,1) == 1){
+		nbyte = recv(client_fd,buf,BUFSIZE,0);
 		write(content,buf,nbyte);
 	}
     
-    close(content);
+	close(content);
 	umask(sval);
 	
     return 0;
@@ -145,6 +181,7 @@ int dispatch() //根据cmd分派任务
     return 0;
 }
 
+
 void *set_client_count(const char *filename)    //实现连接计数器
 {
     int shm_id,sval;
@@ -162,6 +199,7 @@ void *set_client_count(const char *filename)    //实现连接计数器
     return ret;
 }
 
+
 void print_time()
 {
 	time_t timestamp;
@@ -175,10 +213,11 @@ void print_time()
 
 int main(int argc,const char **argv)
 {
-	int server_fd,reuse=0,cpid;
+	int server_fd,reuse=0,cpid,ret;
 
 	struct sockaddr_in server_sock;
 	struct sockaddr_in client_sock;
+
 	
 	memset(&server_sock,0,sizeof(server_sock));
 	server_sock.sin_family = AF_INET;
@@ -201,7 +240,7 @@ int main(int argc,const char **argv)
     if((client_count = (int *)set_client_count(argv[0])) == NULL)
         ERR("set_client_count");
     *client_count = 0;
-    
+
 
 
 Listen:
@@ -212,7 +251,7 @@ Listen:
 
     (*client_count)++;	//更新连接计数器
 	print_time();
-    
+
     cpid = fork();  //开辟子进程与客户端通信
     if(cpid == -1){
         ERR("fork");
@@ -222,9 +261,14 @@ Listen:
 
 		//等待client输入命令
 		while(strncmp(cmd,"quit",4) != 0){
-			while(recv(client_fd,cmd,BUFSIZE,0) == -1);
-			printf("%s\n",cmd);
-			dispatch();
+			ret = wait_for_input(client_fd,600);
+			if(ret == 1){
+				recv(client_fd,cmd,BUFSIZE,0);
+				printf("%s\n",cmd);
+				dispatch();
+			}
+			else
+				break;
 		}
 		close(client_fd);
 		(*client_count)--;	//更新连接计数器

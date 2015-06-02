@@ -1,5 +1,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -39,19 +42,37 @@ char *getarg(const char *s) //此函数返回s中的第二段非空字符串
     return arg;
 }
 
+int wait_for_input(int fd,int time)
+{
+
+	fd_set readfds;
+	struct timeval tv;
+
+	//设置select fd_set
+	FD_ZERO(&readfds);
+	FD_SET(sockfd,&readfds);
+	//等待10分钟
+	tv.tv_sec = time;
+	tv.tv_usec = 0;
+
+	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
+
+}
+
 int cmd_help()
 {
-    if(recv(sockfd,buf,BUFSIZE,0) == -1)
-        ERR("recv");
-    printf("%s\n",buf);
-    return 0;
+	while(wait_for_input(sockfd,1) == 1){
+		nbyte = recv(sockfd,buf,BUFSIZE,0);
+		printf("%s\n",buf);
+	}
 }
 
 int cmd_list()
 {
-	while((nbyte = recv(sockfd,buf,BUFSIZE,0)) > 0)
+	while(wait_for_input(sockfd,1) == 1){
+		nbyte = recv(sockfd,buf,BUFSIZE,0);
 		printf("%s\n",buf);
-
+	}
     return 0;
 }
 
@@ -63,8 +84,11 @@ int cmd_get()
 	umask(0);
 	if((content = open(arg,O_WRONLY|O_CREAT|O_TRUNC,0666)) < 0)
 		ERR("open");
-    
-	while(nbyte = recv(sockfd,buf,BUFSIZE,0) > 0){
+	nbyte = recv(sockfd,buf,BUFSIZE,0);
+	printf("%s\n",buf);
+
+	while(wait_for_input(sockfd,1) == 1){
+		nbyte = recv(sockfd,buf,BUFSIZE,0);
 		if(strcmp(buf,"file doesn't exist.\n") == 0){
 			printf("file doesn't exist.\n");
 			close(content);
@@ -90,6 +114,7 @@ int cmd_put()
 	printf("%s",buf);
     if(strcmp(buf,"failed to create file on server.\n") == 0)
         return -1;
+	send(sockfd,"ready to transfer",BUFSIZE,0);
     
 	if((content = open(arg,O_RDONLY)) < 0)
 		ERR("open");
@@ -97,8 +122,9 @@ int cmd_put()
 		if(send(sockfd,buf,nbyte,0) == -1)
         	perror("send file");
 	}
+
 	printf("file sent.\n");
-    close(content);
+	close(content);
 	
     return 0;
 }
