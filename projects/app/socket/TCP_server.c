@@ -61,7 +61,7 @@ int wait_for_input(int fd,int time)
 	FD_SET(client_fd,&readfds);
 	//等待10分钟
 	tv.tv_sec = time;
-	tv.tv_usec = 0;
+	tv.tv_usec = 500;
 
 	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
 
@@ -150,7 +150,7 @@ int cmd_put()
 	nbyte = recv(client_fd,buf,BUFSIZE,0);
 	printf("%s\n",buf);
 
-	while(wait_for_input(client_fd,1) == 1){
+	while(wait_for_input(client_fd,0) == 1){
 		nbyte = recv(client_fd,buf,BUFSIZE,0);
 		write(content,buf,nbyte);
 	}

@@ -53,7 +53,7 @@ int wait_for_input(int fd,int time)
 	FD_SET(sockfd,&readfds);
 	//等待10分钟
 	tv.tv_sec = time;
-	tv.tv_usec = 0;
+	tv.tv_usec = 500;
 
 	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
 
@@ -61,7 +61,7 @@ int wait_for_input(int fd,int time)
 
 int cmd_help()
 {
-	while(wait_for_input(sockfd,1) == 1){
+	while(wait_for_input(sockfd,0) == 1){
 		nbyte = recv(sockfd,buf,BUFSIZE,0);
 		printf("%s\n",buf);
 	}
@@ -69,7 +69,7 @@ int cmd_help()
 
 int cmd_list()
 {
-	while(wait_for_input(sockfd,1) == 1){
+	while(wait_for_input(sockfd,0) == 1){
 		nbyte = recv(sockfd,buf,BUFSIZE,0);
 		printf("%s\n",buf);
 	}
@@ -87,7 +87,7 @@ int cmd_get()
 	nbyte = recv(sockfd,buf,BUFSIZE,0);
 	printf("%s\n",buf);
 
-	while(wait_for_input(sockfd,1) == 1){
+	while(wait_for_input(sockfd,0) == 1){
 		nbyte = recv(sockfd,buf,BUFSIZE,0);
 		if(strcmp(buf,"file doesn't exist.\n") == 0){
 			printf("file doesn't exist.\n");
