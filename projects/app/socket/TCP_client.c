@@ -17,7 +17,6 @@
 #define BUFSIZE 128
 
 int sockfd,nbyte;
-struct sockaddr_in remote_sock;
 char cmd[BUFSIZE];
 char arg[BUFSIZE];
 char buf[BUFSIZE];
@@ -160,31 +159,50 @@ void sig_exit_handler(int signum)   //如果程序异常终止，则通知server
 
 int main(int argc,char **argv)
 {
-	if(argc != 2){
-		printf("Usage: %s + <hostname>\n",argv[0]);exit(1);
+
+	if (argc < 3) {
+		fprintf(stderr, "Usage: %s host port msg...\n", argv[0]);
+		exit(EXIT_FAILURE);
 	}
 
-	struct hostent *myhost;
-	if((myhost = gethostbyname(argv[1])) == NULL)
-		ERR("gethostbyname");
+	int ret;
+	struct sockaddr_in remote_sock;
+	struct addrinfo hints;
+	struct addrinfo *result,*rp;
+
 	
-	remote_sock.sin_family = AF_INET;
-	remote_sock.sin_port = htons(8080);
-	inet_aton(myhost->h_addr,(struct in_addr *)&remote_sock.sin_addr);
+	memset(&hints,0,sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = 0;
+	hints.ai_protocol = 0;
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
+
+
+	ret = getaddrinfo(argv[1],argv[2],&hints,&result);
+	if(ret != 0)
+		ERR("getaddrinfo");
+	for(rp = result;rp != NULL;rp = result->ai_next){
+		//获取socket
+		if((sockfd = socket(AF_INET,SOCK_STREAM,0)) == -1)
+			continue;
+		//连接到服务器
+		if(connect(sockfd,rp->ai_addr,rp->ai_addrlen) == 0)
+			break;
+	}
+	freeaddrinfo(result);
+
 	
-	if((sockfd = socket(AF_INET,SOCK_STREAM,0)) == -1)
-		ERR("sockfd");
-	if(connect(sockfd,(struct sockaddr *)&remote_sock,sizeof(remote_sock)) == -1)
-		ERR("connect");
-	
-    if(signal(SIGINT,sig_exit_handler) == SIG_ERR)
-        ERR("signal SIGINT");
-    if(signal(SIGTERM,sig_exit_handler) == SIG_ERR)
-        ERR("signal SIGTERM");
+	if(signal(SIGINT,sig_exit_handler) == SIG_ERR)
+		ERR("signal SIGINT");
+	if(signal(SIGTERM,sig_exit_handler) == SIG_ERR)
+		ERR("signal SIGTERM");
     
 	while(strncmp(cmd,"quit",4) != 0){
-        dispatch();
-        printf("\n>");
+	dispatch();
+	printf("\n>");
 		fgets(cmd,BUFSIZE,stdin);
 		send(sockfd,cmd,BUFSIZE,0);
 	}

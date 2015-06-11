@@ -18,12 +18,13 @@
 #include <dirent.h>
 #include <time.h>
 #include <fcntl.h>
+#include <netdb.h>
 #define ERR(x) {perror(x);exit(errno);}
 #define BUFSIZE 128
 #define MAXCONNECT 10
 
 int client_fd,*client_count,nbyte;
-socklen_t client_len;
+
 char cmd[BUFSIZE];
 char arg[BUFSIZE];
 char buf[BUFSIZE] = "\nWelcome to Johnny's server!\n\nPlease input a command.\n";
@@ -58,7 +59,7 @@ int wait_for_input(int fd,int time)
 
 	//设置select fd_set
 	FD_ZERO(&readfds);
-	FD_SET(client_fd,&readfds);
+	FD_SET(fd,&readfds);
 	//等待10分钟
 	tv.tv_sec = time;
 	tv.tv_usec = 500;
@@ -207,39 +208,55 @@ void print_time()
 
 	time(&timestamp);
     showtime = localtime(&timestamp);
-    printf("%02d:%02d:%02d -- %d client connected\n",showtime->tm_hour,showtime->tm_min,showtime->tm_sec,*client_count);
+    printf("%02d:%02d:%02d -- %d client connected.(pid=%d)\n",showtime->tm_hour,showtime->tm_min,showtime->tm_sec,*client_count,getpid());
 }
 
 
 int main(int argc,const char **argv)
 {
-	int server_fd,reuse=0,cpid,ret;
 
-	struct sockaddr_in server_sock;
+	if (argc != 2){
+		fprintf(stderr, "Usage: %s port\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	int server_fd,cpid,ret;
+	socklen_t client_len;
+
 	struct sockaddr_in client_sock;
+	struct addrinfo hints;
+	struct addrinfo *result,*rp;
 
 	
-	memset(&server_sock,0,sizeof(server_sock));
-	server_sock.sin_family = AF_INET;
-	server_sock.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_sock.sin_port = htons(8080);
-	
-    //获取socket
-	if((server_fd = socket(AF_INET,SOCK_STREAM,0)) == -1)
-		ERR("server_fd");
-    //绑定server_fd
-    if(bind(server_fd,(struct sockaddr *)&server_sock,sizeof(server_sock)) == -1)
-        ERR("bind");
-    //设置server_fd端口可以被重复使用
-    if(setsockopt(server_fd,SOL_SOCKET,SO_REUSEADDR,&reuse,sizeof(reuse)) == -1)
-        ERR("setsockopt");
-    //监听server_fd
+	memset(&hints,0,sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_protocol = 0;
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
+
+
+	ret = getaddrinfo(NULL,argv[1],&hints,&result);
+	if(ret != 0)
+		ERR("getaddrinfo");
+	for(rp = result;rp != NULL;rp = result->ai_next){
+		//获取socket
+		if((server_fd = socket(AF_INET,SOCK_STREAM,0)) == -1)
+			continue;
+		//绑定server_fd
+		if(bind(server_fd,rp->ai_addr,rp->ai_addrlen) == 0)
+			break;
+	}
+	freeaddrinfo(result);
+	//监听server_fd
 	if(listen(server_fd,MAXCONNECT) == -1)
 		ERR("listen");
-    //设置连接计数器
-    if((client_count = (int *)set_client_count(argv[0])) == NULL)
-        ERR("set_client_count");
-    *client_count = 0;
+	//设置连接计数器
+	if((client_count = (int *)set_client_count(argv[0])) == NULL)
+		ERR("set_client_count");
+	*client_count = 0;
 
 
 
@@ -264,7 +281,7 @@ Listen:
 			ret = wait_for_input(client_fd,600);
 			if(ret == 1){
 				recv(client_fd,cmd,BUFSIZE,0);
-				printf("%s\n",cmd);
+				printf("%d - %s",getpid(),cmd);
 				dispatch();
 			}
 			else
