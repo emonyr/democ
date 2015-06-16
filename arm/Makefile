@@ -11,7 +11,7 @@ COMPONENT		+= uart.o
 SDTOOL			:= ./mkv210_image
 LINKER_SCRIPT		:= -Tmap.lds
 
-CROSS_COMPILE		:= arm-linux-
+CROSS_COMPILE		:= arm-linux-gnueabi-
 CC			:= $(CROSS_COMPILE)gcc
 LD			:= $(CROSS_COMPILE)ld
 OBJCOPY			:= $(CROSS_COMPILE)objcopy
