@@ -22,22 +22,6 @@ void sig_exit_handler(int signum)
 	exit(1);
 }
 
-int wait_for_input(int filedes,int time)
-{
-	
-	fd_set readfds;
-	struct timeval tv;
-	
-	//设置select fd_set
-	FD_ZERO(&readfds);
-	FD_SET(filedes,&readfds);
-	//等待10分钟
-	tv.tv_sec = time;
-	tv.tv_usec = 500;
-	
-	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
-	
-}
 
 int main(int argc,const char *argv[]){
 	
