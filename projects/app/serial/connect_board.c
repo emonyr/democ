@@ -65,29 +65,7 @@ int main(int argc,const char *argv[]){
 	//保存设置
 	tcsetattr(fd,TCSANOW,&opt);
 	
-	cpid = fork();  //开辟子进程与客户端通信
-	if(cpid == -1){
-		ERR("fork");
-	}
-	else if(cpid == 0){
-	Listen:
-		while(wait_for_input(fd,6000) == 1){
-			nbyte = read(fd,buf,1);
-			write(STDOUT_FILENO,buf,1);
-		}
-	}
-	else{
-		while(1){
-			printf("\n>");
-			fgets(cmd,BUFSIZE,stdin);
-			if((strncmp(cmd,"quit",4) == 0 )|| (strncmp(cmd,"exit",4) == 0 ))
-				goto Out;
-			while(cmd[i++]){
-				write(fd,cmd[i],1);
-			}
-		}
-	}
-	goto Listen;
+	while(1);
 	
 Out:
 	close(fd);
