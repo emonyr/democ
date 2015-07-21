@@ -1,2 +1,2 @@
 #!/bin/bash
-sudo dd seek=1 if=$1 of=$2
+sudo dd seek=1 if=$1 of=$2 iflag=dsync oflag=dsync

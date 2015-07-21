@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
@@ -22,6 +24,22 @@ void sig_exit_handler(int signum)
 	exit(1);
 }
 
+int wait_for_input(int fd,int time)
+{
+	
+	fd_set readfds;
+	struct timeval tv;
+	
+	//设置select fd_set
+	FD_ZERO(&readfds);
+	FD_SET(fd,&readfds);
+	//等待10分钟
+	tv.tv_sec = time;
+	tv.tv_usec = 500;
+	
+	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
+	
+}
 
 int main(int argc,const char *argv[]){
 	
@@ -30,7 +48,7 @@ int main(int argc,const char *argv[]){
 	struct termios opt;
 	
 	//使用open函数打开串口，获得串口设备文件的文件描述符
-	if((fd=open("/dev/ttys1",O_RDWR| O_NOCTTY))==-1){
+	if((fd=open("/dev/tty.usbserial",O_RDWR| O_NOCTTY)) == -1){
 		ERR("Cannot open the serial port.\n");
 	}
 
@@ -49,7 +67,14 @@ int main(int argc,const char *argv[]){
 	//保存设置
 	tcsetattr(fd,TCSANOW,&opt);
 	
-	while(1);
+	while(1){
+		wait_for_input(fd,6000);
+		while(read(fd,buf,BUFSIZE) != 0){
+			printf("%s",buf);
+		};
+	};
+	
+	
 	
 Out:
 	close(fd);
