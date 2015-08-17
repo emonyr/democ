@@ -50,7 +50,7 @@ int wait_for_input(int fd,int time)
 	//设置select fd_set
 	FD_ZERO(&readfds);
 	FD_SET(sockfd,&readfds);
-	//等待10分钟
+	//等待50ms
 	tv.tv_sec = time;
 	tv.tv_usec = 500;
 
