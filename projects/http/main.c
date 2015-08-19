@@ -1,4 +1,7 @@
-
+/*
+ * main.c 
+ * jyserver主函数，负责启动server，开辟子进程处理请求，循环接受连接
+ */
 
 #include "global.h"
 

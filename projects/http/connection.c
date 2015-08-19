@@ -71,8 +71,8 @@ void print_time(void)
 	struct tm *showtime;
 
 	time(&timestamp);
-    showtime = localtime(&timestamp);
-    printf("%02d:%02d:%02d ",showtime->tm_hour,showtime->tm_min,showtime->tm_sec);
+    showtime = gmtime(&timestamp);
+    printf("%s,%02d %s %04d%02d:%02d:%02d GMT",day_tab[showtime->tm_wday],showtime->tm_mday,month_tab[showtime->tm_mon],showtime->tm_year+1900,showtime->tm_hour,showtime->tm_min,showtime->tm_sec);
 }
 
 int wait_for_input(int fd,int seconds)
@@ -94,11 +94,12 @@ int wait_for_input(int fd,int seconds)
 void handle_request(int fd)
 {
 	int ret;
+	memset(request_buf,0,BUFSIZE);
 	
 	ret = wait_for_input(fd,30);
 	if(ret == 1)
 		recv(fd,request_buf,BUFSIZE,0);
-	dispatch(fd,request_buf);
+	dispatch(fd);
 	close(fd);
 }
 
