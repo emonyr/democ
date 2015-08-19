@@ -1,7 +1,7 @@
 #Makefile designed by Johnny Yang
 
 #environment variant
-TARGET	:= myserver
+TARGET	:= ant
 COMPONENTS	+= main.o
 COMPONENTS	+= connection.o
 COMPONENTS	+= protocal.o
