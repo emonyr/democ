@@ -1,1 +1,1 @@
-# democ
+# programs written in C
