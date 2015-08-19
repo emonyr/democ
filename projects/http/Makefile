@@ -1,7 +1,7 @@
 #Makefile designed by Johnny Yang
 
 #environment variant
-TARGET	:= ant
+TARGET	:= jyserver
 COMPONENTS	+= main.o
 COMPONENTS	+= connection.o
 COMPONENTS	+= protocal.o
@@ -22,4 +22,4 @@ $(TARGET): $(COMPONENTS)
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 clean:
-	rm -f *.o myserver
+	rm -f $(TARGET) $(COMPONENTS)
