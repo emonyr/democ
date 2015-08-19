@@ -1,4 +1,4 @@
-# Ant server written by Johnny Yang
+# jyserver 
 
 -based on http,TCP/IP protocal
 

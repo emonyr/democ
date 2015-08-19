@@ -20,6 +20,9 @@
 #define ERR(x) do{} while(0)
 #endif
 
+#define ROOT "./www/"
+#define CGIROOT "./www/cgi-bin/"
+
 #define BACKLOGSIZE	1024
 #define BUFSIZE	8192
 
