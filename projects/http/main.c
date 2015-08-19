@@ -1,13 +1,13 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <errno.h>
 
-#include "include/connection.h"
-#include "include/debug.h"
 
+#include "global.h"
 
 int main(int argc,const char *argv[])
 {
+	if (argc != 2){
+		fprintf(stderr, "Usage: %s port\n", argv[0]);
+		return -1;
+	}
 	int client_fd = -1;
 	struct sockaddr_in client_sock;
 	socklen_t client_len;
@@ -15,17 +15,22 @@ int main(int argc,const char *argv[])
 	creat_server_fd(argv[1]);
 	
 wait:
-	wait_for_connect(client_fd,(struct sockaddr *)&client_sock,&client_len);
-	
-	int cpid = fork();	//开辟子进程与客户端通信
-	if(cpid == -1)
-        ERR("fork");
-    else if(cpid == 0){
-		handle_request(client_fd);
-	}
-	else{
-		close(client_fd);
-		goto wait;
+	wait_for_connect(&client_fd,&client_sock,&client_len);
+
+	switch(fork()) {
+		case -1:
+			/* error */
+			ERR("fork");
+			break;
+		case 0:
+			/* child, success */
+			handle_request(client_fd);
+			break;
+		default:
+			/* parent, success */
+			close(client_fd);
+			goto wait;
+			break;
 	}
 	return 0;
 }

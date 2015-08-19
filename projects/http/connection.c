@@ -1,26 +1,20 @@
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <time.h>
-#include <sys/select.h>
-#include <unistd.h>
+/*
+ * connection.c 
+ * 提供建立服务器连接的函数
+ */
 
-#include "include/connection.h"
-#include "include/debug.h"
+#include "global.h"
 
-int creat_server_fd(const char port)
+static int sock_opt = 1;
+int server_fd = -1;
+
+int creat_server_fd(const char *port)
 {
-	int ret;
-
 	struct addrinfo hints;
 	struct addrinfo *result,*rp;
 	result = NULL;
 	rp = NULL;
 
-	
 	memset(&hints,0,sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -30,9 +24,7 @@ int creat_server_fd(const char port)
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 
-
-	ret = getaddrinfo(NULL,port,&hints,&result);
-	if(ret != 0)
+	if(getaddrinfo(NULL,port,&hints,&result) != 0);
 		ERR("getaddrinfo");
 	for(rp = result;rp != NULL;rp = result->ai_next){
 		//获取socket
@@ -46,8 +38,17 @@ int creat_server_fd(const char port)
 	if(server_fd == -1)
 		ERR("socket");
 	else{
+		//设置server_fd为nonblock
+		if(set_fd_flags(server_fd,O_NONBLOCK) == -1)
+			ERR("fcntl:set nonblock");
+		//禁止cgi写server_fd
+		if (fcntl(server_fd, F_SETFD, 1) == -1)
+			ERR("fcntl:set close-on-exec");
+		//设置server_fd可复用
+		if (setsockopt(server_fd,SOL_SOCKET,SO_REUSEADDR,(void *)&sock_opt,sizeof(sock_opt)) == -1) 
+			ERR("setsockopt:set reuse");
 		//监听server_fd
-		if(listen(server_fd,MAXCONNECT) == -1)
+		if(listen(server_fd,BACKLOGSIZE) == -1)
 			ERR("listen");
 		printf("Server standby.\n");
 	}
@@ -55,13 +56,13 @@ int creat_server_fd(const char port)
 	return 0;
 }
 
-void wait_for_connect(int fd,sockaddr_in *addr,socklen_t *addrlen)
+void wait_for_connect(int *fd,struct sockaddr_in *addr,socklen_t *addrlen)
 {
+	print_time();
 	printf("Waiting for connection...\n");
 	do{
-		fd = accept(server_fd,(struct sockaddr *)&client_sock,&client_len);
-	}while(fd == -1)
-
+		*fd = accept(server_fd,(struct sockaddr *)addr,addrlen);
+	}while(*fd == -1);
 }
 
 void print_time(void)
@@ -90,18 +91,30 @@ int wait_for_input(int fd,int seconds)
 	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
 }
 
-int handle_request(int fd)
+void handle_request(int fd)
 {
 	int ret;
 	
-	ret = wait_for_input(client_fd,30);
+	ret = wait_for_input(fd,30);
 	if(ret == 1)
-		recv(client_fd,cmd,BUFSIZE,0);
-	close(client_fd);
+		recv(fd,request_buf,BUFSIZE,0);
+	dispatch(fd,request_buf);
+	close(fd);
 }
 
 
+int set_fd_flags(int fd,int new_flags)
+{
+    int flags;
 
+    flags = fcntl(fd,F_GETFL);
+    if (flags == -1)
+        return -1;
+
+    flags |= new_flags;
+    flags = fcntl(fd,F_SETFL,flags);
+    return flags;
+}
 
 
 
