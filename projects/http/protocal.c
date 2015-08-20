@@ -5,44 +5,38 @@
 
 #include "global.h"
 
-int buf_end = 0;
-
+int buf_end;
 
 /* dispatch() 根据请求类型分派任务 */
 int dispatch(int fd)
 {	
-	if(all_to_lowercase(buf) == -1)
+	if(all_to_lowercase(request_buf) == -1)
 		ERR("all_to_lowercase");
 	
+	printf("%s\n",request_buf);
     //把request_buf读取到request结构体
 	struct request *s;
 	s = (struct request *)malloc(sizeof(struct request));
 	memset(s,0,sizeof(struct request));
-	if(read_request(s) == -1){
+	if(read_request(s) != 0){
 		send_response(fd,"HTTP/1.1 400 Bad Request\r\n");
 		free(s);
 		close(fd);
+		ERR("read_request");
 	}
 	
 	//通过结构体的type识别请求方法
 	memset(response_buf,0,BUFSIZE);
-	if(strncmp(s->type,"get",3) == 0)
-		response_get(fd,s);
-	else if(strncmp(s->type,"head",4) == 0){
-		response_head(fd,s);
-		print_to_buf(response_buf,"\r\n");
-	}
-    else if(strncmp(s->type,"post",4) == 0)
-		response_post(fd,s);
-    else if(strncmp(s->type,"put",3) == 0)
-		response_put(fd,s);
-	else if(strncmp(s->type,"delete",6) == 0)
-		response_delete(fd,s);
-    else{
-		send_response(fd,"HTTP/1.1 400 Bad Request\r\n");
-		free(s);
-		close(fd);
-	}
+	if((strcmp(s->type,"get") == 0) || (strcmp(s->type,"head") == 0))
+		response_get(s);
+    else if(strcmp(s->type,"post") == 0)
+		response_post(s);
+    else if(strcmp(s->type,"put") == 0)
+		response_put(s);
+	else if(strcmp(s->type,"delete") == 0)
+		response_delete(s);
+    else
+		print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
 	
 	send_response(fd,response_buf);
 	free(s);
@@ -51,63 +45,81 @@ int dispatch(int fd)
 	return 0;
 }
 
-int response_get(int fd,struct request *s)
+int response_get(struct request *s)
 {
-	response_head(fd,s);
+	int resoucefd,nbytes;
+	char filesize[32];
+	
+	current_time();
+	printf("\nProcessing GET request: pid = %d\n",getpid());
+	
+	resoucefd = open(s->filename,O_RDONLY,0666);
+	if(resoucefd == -1){
+		print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
+		perror("open");
+		return -1;
+	}
+	sprintf(filesize,"%d",(int)lseek(resoucefd,0,SEEK_END));
+
+	buf_end = 0;
+	print_to_buf(response_buf,"HTTP/1.1 200 OK\r\n",NULL);
+	print_to_buf(response_buf,"Server: jyserver\r\n",NULL);
+	print_to_buf(response_buf,"Date: %s\r\n",GMTtime);
+	print_to_buf(response_buf,"Connection: Closed\r\n",NULL);
+	print_to_buf(response_buf,"Content-Length: %s\r\n",filesize);
+	print_to_buf(response_buf,"Content-Type: text/html\r\n",NULL);
+	print_to_buf(response_buf,"Cache-Control:no-cache\r\n",NULL);
+	print_to_buf(response_buf,"\r\n",NULL);
+	if(strcmp(s->type,"head") == 0)
+		return 0;
+	lseek(resoucefd,0,SEEK_SET);
+	while(nbytes != 0){
+		nbytes = read(resoucefd,&response_buf[buf_end],1024);
+		buf_end = buf_end + nbytes;
+	}
+	close(resoucefd);
 	
 	return 0;
 }
 
-int response_head(int fd,struct request *s)
+int response_post(struct request *s)
 {
-	char current_time[29];
-	
-	print_to_buf(response_buf,"HTTP/1.1 200 OK\r\n");
-	print_to_buf(response_buf,"Server: jyserver\r\n");
-	print_to_buf(response_buf,"Date: ");
-	sprintf(current_time,print_time());
-	print_to_buf(response_buf,current_time);
-	print_to_buf(response_buf,"\r\n");
-	print_to_buf(response_buf,"Connection: Closed\r\n");
-	
+	print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
 	return 0;
 }
 
-int response_post(int fd,struct request *s)
+int response_put(struct request *s)
 {
-	
+	print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
 	return 0;
 }
 
-int response_put(int fd,struct request *s)
+int response_delete(struct request *s)
 {
-	
-	return 0;
-}
-
-int response_delete(int fd,struct request *s)
-{
-	
+	print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
 	return 0;
 }
 
 int send_response(int fd,char *msg)
 {
-	send(fd,msg,strlen(msg),0);
-	return 0;
+	ssize_t nbytes;
+	nbytes = send(fd,msg,strlen(msg),0);
+	if(nbytes == -1)
+		ERR("send_response");
+	return nbytes;
 }
 
-static int print_to_buf(char *buf,char *str)
+int print_to_buf(char *buf,const char *format,char *str)
 {
-	sprintf(buf+buf_end,str);
-	buf_end += strlen(str);
+	sprintf(&buf[buf_end],format,str);
+	buf_end = strlen(buf);
 	if(buf_end>BUFSIZE)
 		ERR("print_to_buf");
 	return 0;
 }
 
 /* all_to_lowercase() 把buf内的字母转为小写 */
-static int all_to_lowercase(char *buf)
+int all_to_lowercase(char *buf)
 {
 	int i,len;
 	len = strlen(buf);
@@ -118,11 +130,11 @@ static int all_to_lowercase(char *buf)
 	return i == len ? 0:-1;
 }
 
-static int read_request(struct request *s) 
+int read_request(struct request *s) 
 {
-	int i=0,j=0;
+	int i=0;
 	char *c;
-	c = response_buf;
+	c = request_buf;
 	
 	//跳过空格
 	while(*c == ' ')
@@ -136,18 +148,17 @@ static int read_request(struct request *s)
 	}
 	s->type[i] = '\0';
 	
-	//读取hostname
+	//读取URI
 	while(*c != '/')
 		c++;
 	while(*c == '/')
 		c++;
 	if(*c == ' ')
-		s->filename = "./www/index.html";
+		sprintf(s->filename,"%s/index.html",ROOT);
 	else{
-		i=2;
-		s->filename[0] = '.';
-		s->filename[1] = '/';
-		while(*c != ' ')
+		sprintf(s->filename,"%s/",ROOT);
+		i=strlen(ROOT)+2;
+		while(*c != ' '){
 			s->filename[i] = *c;
 			c++;
 			i++;

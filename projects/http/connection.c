@@ -5,6 +5,9 @@
 
 #include "global.h"
 
+const char month_tab[] ="Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec ";
+const char day_tab[] = "Sun,Mon,Tue,Wed,Thu,Fri,Sat";
+
 static int sock_opt = 1;
 int server_fd = -1;
 
@@ -58,21 +61,30 @@ int creat_server_fd(const char *port)
 
 void wait_for_connect(int *fd,struct sockaddr_in *addr,socklen_t *addrlen)
 {
-	print_time();
-	printf("Waiting for connection...\n");
+	current_time();
+	printf(" Waiting for connection...\n");
 	do{
 		*fd = accept(server_fd,(struct sockaddr *)addr,addrlen);
 	}while(*fd == -1);
 }
 
-void print_time(void)
+char * current_time(void)
 {
 	time_t timestamp;
 	struct tm *showtime;
+	char day[4];
+	char month[4];
 
 	time(&timestamp);
     showtime = gmtime(&timestamp);
-    printf("%s,%02d %s %04d%02d:%02d:%02d GMT",day_tab[showtime->tm_wday],showtime->tm_mday,month_tab[showtime->tm_mon],showtime->tm_year+1900,showtime->tm_hour,showtime->tm_min,showtime->tm_sec);
+	strncpy(day,&day_tab[showtime->tm_wday * 4],3);
+	strncpy(month,&month_tab[showtime->tm_mon * 4],3);
+	day[3] = '\0';
+	month[3] = '\0';
+    sprintf(GMTtime,"%s,%02d %s %04d%02d:%02d:%02d GMT",day,showtime->tm_mday,month,showtime->tm_year+1900,showtime->tm_hour,showtime->tm_min,showtime->tm_sec);
+	printf("%s",GMTtime);
+	
+	return GMTtime;
 }
 
 int wait_for_input(int fd,int seconds)
