@@ -19,7 +19,7 @@ int dispatch(int fd)
 	s = (struct request *)malloc(sizeof(struct request));
 	memset(s,0,sizeof(struct request));
 	if(read_request(s) != 0){
-		send_response(fd,"HTTP/1.1 400 Bad Request\r\n");
+		send_response(fd,NOT_FOUND);
 		free(s);
 		close(fd);
 		ERR("read_request");
@@ -36,7 +36,7 @@ int dispatch(int fd)
 	else if(strcmp(s->type,"delete") == 0)
 		response_delete(s);
     else
-		print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
+		print_to_buf(response_buf,NOT_FOUND,NULL);
 	
 	printf("%s\n\n",response_buf);
 	send_response(fd,response_buf);
@@ -58,11 +58,11 @@ int response_get(struct request *s)
 	
 	stat(s->filename,&sb);
 	if(sb.st_mode & S_IXUSR)
-		handle_cgi(s->filename);
+		handle_cgi(s);
 	
 	resoucefd = open(s->filename,O_RDONLY,0666);
 	if(resoucefd == -1){
-		print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
+		print_to_buf(response_buf,NOT_FOUND,NULL);
 		perror("open");
 		return -1;
 	}
@@ -85,7 +85,8 @@ int response_get(struct request *s)
 		nbytes = read(resoucefd,&response_buf[buf_end],1024);
 		buf_end = buf_end + nbytes;
 	}
-	unlink(s->filename);
+	if(strcmp(s->filetype,"cgi") == 0)
+		unlink(s->filename);
 	close(resoucefd);
 	
 	return 0;
@@ -178,13 +179,14 @@ int read_request(struct request *s)
     return 0;
 }
 
-int handle_cgi(char *filename)
+int handle_cgi(struct request *s)
 {
 	char output[12];
-	sprintf(output," >%d",getpid());
-	system(strcat(filename,output));
+	sprintf(output," >%s/%d",CGIROOT,getpid());
+	system(strcat(s->filename,output));
 	execl("sed","-i","'s/\n/\r\n/g'","./o",(char *)NULL);
-	sprintf(filename,"./%d",getpid());
+	sprintf(s->filename,"%s/%d",CGIROOT,getpid());
+	sprintf(s->filetype,"cgi");
 	
 	return 0;
 }

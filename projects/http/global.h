@@ -28,6 +28,7 @@
 
 #define ROOT "./www"
 #define CGIROOT "./www/cgi-bin"
+#define NOT_FOUND "HTTP/1.1 400 Bad Request\r\n\r\n404 not found"
 
 #define BACKLOGSIZE	1024
 #define BUFSIZE	8192
@@ -55,6 +56,7 @@ struct request{
 	char hostname[HOSTNAME];
 	char port[4];
 	char filename[FILENAME];
+	char filetype[12];
 };
 
 extern int dispatch(int fd);
@@ -66,7 +68,7 @@ extern int send_response(int fd,char *msg);
 extern int all_to_lowercase(char *buf);
 extern int read_request(struct request *s);
 extern int print_to_buf(char *buf,const char *format,char *str);
-extern int handle_cgi(char *cgi);
+extern int handle_cgi(struct request *s);
 
 #endif
 
