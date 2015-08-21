@@ -66,6 +66,7 @@ extern int send_response(int fd,char *msg);
 extern int all_to_lowercase(char *buf);
 extern int read_request(struct request *s);
 extern int print_to_buf(char *buf,const char *format,char *str);
+extern int handle_cgi(char *cgi);
 
 #endif
 

@@ -1,5 +1,5 @@
 #!/bin/sh
 echo "Content-type: text/plain"
 echo ""
-echo "Today is:"
+echo "<p>Today is:</p>"
 date

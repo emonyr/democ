@@ -13,7 +13,7 @@ int dispatch(int fd)
 	if(all_to_lowercase(request_buf) == -1)
 		ERR("all_to_lowercase");
 	
-	printf("%s\n",request_buf);
+	printf("%s\n\n",request_buf);
     //把request_buf读取到request结构体
 	struct request *s;
 	s = (struct request *)malloc(sizeof(struct request));
@@ -38,6 +38,7 @@ int dispatch(int fd)
     else
 		print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
 	
+	printf("%s\n\n",response_buf);
 	send_response(fd,response_buf);
 	free(s);
 	close(fd);
@@ -49,9 +50,15 @@ int response_get(struct request *s)
 {
 	int resoucefd,nbytes;
 	char filesize[32];
+	struct stat sb;
 	
 	current_time();
 	printf("\nProcessing GET request: pid = %d\n",getpid());
+	printf("+++++++s->filename: %s\n",s->filename);
+	
+	stat(s->filename,&sb);
+	if(sb.st_mode & S_IXUSR)
+		handle_cgi(s->filename);
 	
 	resoucefd = open(s->filename,O_RDONLY,0666);
 	if(resoucefd == -1){
@@ -68,15 +75,17 @@ int response_get(struct request *s)
 	print_to_buf(response_buf,"Connection: Closed\r\n",NULL);
 	print_to_buf(response_buf,"Content-Length: %s\r\n",filesize);
 	print_to_buf(response_buf,"Content-Type: text/html\r\n",NULL);
-	print_to_buf(response_buf,"Cache-Control:no-cache\r\n",NULL);
+	print_to_buf(response_buf,"Cache-Control: no-cache\r\n",NULL);
 	print_to_buf(response_buf,"\r\n",NULL);
 	if(strcmp(s->type,"head") == 0)
 		return 0;
+	
 	lseek(resoucefd,0,SEEK_SET);
 	while(nbytes != 0){
 		nbytes = read(resoucefd,&response_buf[buf_end],1024);
 		buf_end = buf_end + nbytes;
 	}
+	unlink(s->filename);
 	close(resoucefd);
 	
 	return 0;
@@ -157,7 +166,7 @@ int read_request(struct request *s)
 		sprintf(s->filename,"%s/index.html",ROOT);
 	else{
 		sprintf(s->filename,"%s/",ROOT);
-		i=strlen(ROOT)+2;
+		i=strlen(ROOT)+1;
 		while(*c != ' '){
 			s->filename[i] = *c;
 			c++;
@@ -168,6 +177,21 @@ int read_request(struct request *s)
 
     return 0;
 }
+
+int handle_cgi(char *filename)
+{
+	char output[12];
+	sprintf(output," >%d",getpid());
+	system(strcat(filename,output));
+	execl("sed","-i","'s/\n/\r\n/g'","./o",(char *)NULL);
+	sprintf(filename,"./%d",getpid());
+	
+	return 0;
+}
+
+
+
+
 
 
 
