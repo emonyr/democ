@@ -94,19 +94,22 @@ int response_get(struct request *s)
 
 int response_post(struct request *s)
 {
-	print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
+	//reserved
+	print_to_buf(response_buf,NOT_FOUND,NULL);
 	return 0;
 }
 
 int response_put(struct request *s)
 {
-	print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
+	//reserved
+	print_to_buf(response_buf,NOT_FOUND,NULL);
 	return 0;
 }
 
 int response_delete(struct request *s)
 {
-	print_to_buf(response_buf,"HTTP/1.1 400 Bad Request\r\n",NULL);
+	//reserved
+	print_to_buf(response_buf,NOT_FOUND,NULL);
 	return 0;
 }
 
@@ -182,10 +185,10 @@ int read_request(struct request *s)
 int handle_cgi(struct request *s)
 {
 	char output[12];
-	sprintf(output," >%s/%d",CGIROOT,getpid());
+	sprintf(output," >%s/%d",CGITMP,getpid());
 	system(strcat(s->filename,output));
 	execl("sed","-i","'s/\n/\r\n/g'","./o",(char *)NULL);
-	sprintf(s->filename,"%s/%d",CGIROOT,getpid());
+	sprintf(s->filename,"%s/%d",CGITMP,getpid());
 	sprintf(s->filetype,"cgi");
 	
 	return 0;

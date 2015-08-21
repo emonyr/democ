@@ -27,7 +27,7 @@
 #endif
 
 #define ROOT "./www"
-#define CGIROOT "./www/cgi-bin"
+#define CGITMP "./www/cgi-bin/tmp"
 #define NOT_FOUND "HTTP/1.1 400 Bad Request\r\n\r\n404 not found"
 
 #define BACKLOGSIZE	1024
