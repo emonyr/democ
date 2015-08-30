@@ -8,45 +8,34 @@
 int buf_end;
 
 /* dispatch() 根据请求类型分派任务 */
-int dispatch(int fd)
+int dispatch(struct request *req)
 {	
-	if(all_to_lowercase(request_buf) == -1)
-		ERR("all_to_lowercase");
-	
-	printf("%s\n\n",request_buf);
-    //把request_buf读取到request结构体
-	struct request *s;
-	s = (struct request *)malloc(sizeof(struct request));
-	memset(s,0,sizeof(struct request));
-	if(read_request(s) != 0){
-		send_response(fd,NOT_FOUND);
-		free(s);
-		close(fd);
-		ERR("read_request");
-	}
-	
+
 	//通过结构体的type识别请求方法
+	char response_buf[BUFSIZE];
 	memset(response_buf,0,BUFSIZE);
-	if((strcmp(s->type,"get") == 0) || (strcmp(s->type,"head") == 0))
-		response_get(s);
-    else if(strcmp(s->type,"post") == 0)
-		response_post(s);
-    else if(strcmp(s->type,"put") == 0)
-		response_put(s);
-	else if(strcmp(s->type,"delete") == 0)
-		response_delete(s);
+	req->response_buf = response_buf;
+	if((strcmp(req->type,"get") == 0) || (strcmp(req->type,"head") == 0))
+		response_get(req);
+    else if(strcmp(req->type,"post") == 0)
+		response_post(req);
+    else if(strcmp(req->type,"put") == 0)
+		response_put(req);
+	else if(strcmp(req->type,"delete") == 0)
+		response_delete(req);
     else
-		print_to_buf(response_buf,NOT_FOUND,NULL);
+		print_to_buf(req->response_buf,NOT_FOUND,NULL);
 	
-	printf("%s\n\n",response_buf);
-	send_response(fd,response_buf);
-	free(s);
-	close(fd);
+	//printf("%s\n\n",req->response_buf);
+	send_response(req->fd,req->response_buf);
+	close(req->fd);
+	free(req->buf);
+	free(req);
 
 	return 0;
 }
 
-int response_get(struct request *s)
+int response_get(struct request *req)
 {
 	int resoucefd,nbytes;
 	char filesize[32];
@@ -54,62 +43,62 @@ int response_get(struct request *s)
 	
 	current_time();
 	printf("\nProcessing GET request: pid = %d\n",getpid());
-	printf("+++++++s->filename: %s\n",s->filename);
+	printf("+++++++req->filename: %s\n",req->filename);
 	
-	stat(s->filename,&sb);
+	stat(req->filename,&sb);
 	if(sb.st_mode & S_IXUSR)
-		handle_cgi(s);
+		handle_cgi(req);
 	
-	resoucefd = open(s->filename,O_RDONLY,0666);
+	resoucefd = open(req->filename,O_RDONLY,0666);
 	if(resoucefd == -1){
-		print_to_buf(response_buf,NOT_FOUND,NULL);
+		print_to_buf(req->response_buf,NOT_FOUND,NULL);
 		perror("open");
 		return -1;
 	}
 	sprintf(filesize,"%d",(int)lseek(resoucefd,0,SEEK_END));
 
 	buf_end = 0;
-	print_to_buf(response_buf,"HTTP/1.1 200 OK\r\n",NULL);
-	print_to_buf(response_buf,"Server: jyserver\r\n",NULL);
-	print_to_buf(response_buf,"Date: %s\r\n",GMTtime);
-	print_to_buf(response_buf,"Connection: Closed\r\n",NULL);
-	print_to_buf(response_buf,"Content-Length: %s\r\n",filesize);
-	print_to_buf(response_buf,"Content-Type: text/html\r\n",NULL);
-	print_to_buf(response_buf,"Cache-Control: no-cache\r\n",NULL);
-	print_to_buf(response_buf,"\r\n",NULL);
-	if(strcmp(s->type,"head") == 0)
+	print_to_buf(req->response_buf,"HTTP/1.1 200 OK\r\n",NULL);
+	print_to_buf(req->response_buf,"Server: jyserver\r\n",NULL);
+	print_to_buf(req->response_buf,"Date: %s\r\n",GMTtime);
+	print_to_buf(req->response_buf,"Connection: Closed\r\n",NULL);
+	print_to_buf(req->response_buf,"Content-Length: %s\r\n",filesize);
+	print_to_buf(req->response_buf,"Content-Type: text/html\r\n",NULL);
+	print_to_buf(req->response_buf,"Cache-Control: no-cache\r\n",NULL);
+	print_to_buf(req->response_buf,"\r\n",NULL);
+	if(strcmp(req->type,"head") == 0)
 		return 0;
 	
 	lseek(resoucefd,0,SEEK_SET);
 	while(nbytes != 0){
-		nbytes = read(resoucefd,&response_buf[buf_end],1024);
+		nbytes = read(resoucefd,&req->response_buf[buf_end],1024);
 		buf_end = buf_end + nbytes;
 	}
-	if(strcmp(s->filetype,"cgi") == 0)
-		unlink(s->filename);
+	if(strcmp(req->filetype,"cgi") == 0)
+		unlink(req->filename);
 	close(resoucefd);
 	
 	return 0;
 }
 
-int response_post(struct request *s)
+int response_post(struct request *req)
 {
 	//reserved
-	print_to_buf(response_buf,NOT_FOUND,NULL);
+	print_to_buf(req->response_buf,NOT_FOUND,NULL);
 	return 0;
 }
 
-int response_put(struct request *s)
+int response_put(struct request *req)
 {
 	//reserved
-	print_to_buf(response_buf,NOT_FOUND,NULL);
+	print_to_buf(req->response_buf,NOT_FOUND,NULL);
 	return 0;
 }
 
-int response_delete(struct request *s)
+int response_delete(struct request *req)
 {
 	//reserved
-	print_to_buf(response_buf,NOT_FOUND,NULL);
+	print_to_buf(req->response_buf,NOT_FOUND,NULL);
 	return 0;
 }
 
@@ -143,7 +132,7 @@ int all_to_lowercase(char *buf)
 	return i == len ? 0:-1;
 }
 
-int read_request(struct request *s) 
+int read_request(struct request *req,char *request_buf) 
 {
 	int i=0;
 	char *c;
@@ -155,11 +144,11 @@ int read_request(struct request *s)
 	
 	//读取请求方法
     while((*c != ' ') && (i < 8)){
-		s->type[i] = *c;
+		req->type[i] = *c;
 		c++;
 		i++;
 	}
-	s->type[i] = '\0';
+	req->type[i] = '\0';
 	
 	//读取URI
 	while(*c != '/')
@@ -167,38 +156,29 @@ int read_request(struct request *s)
 	while(*c == '/')
 		c++;
 	if(*c == ' ')
-		sprintf(s->filename,"%s/index.html",ROOT);
+		sprintf(req->filename,"%s/index.html",ROOT);
 	else{
-		sprintf(s->filename,"%s/",ROOT);
+		sprintf(req->filename,"%s/",ROOT);
 		i=strlen(ROOT)+1;
 		while(*c != ' '){
-			s->filename[i] = *c;
+			req->filename[i] = *c;
 			c++;
 			i++;
 		}
-		s->filename[i] = '\0';
+		req->filename[i] = '\0';
 	}
 
     return 0;
 }
 
-int handle_cgi(struct request *s)
+int handle_cgi(struct request *req)
 {
 	char output[12];
 	sprintf(output," >%s/%d",CGITMP,getpid());
-	system(strcat(s->filename,output));
+	system(strcat(req->filename,output));
 	execl("sed","-i","'s/\n/\r\n/g'","./o",(char *)NULL);
-	sprintf(s->filename,"%s/%d",CGITMP,getpid());
-	sprintf(s->filetype,"cgi");
+	sprintf(req->filename,"%s/%d",CGITMP,getpid());
+	sprintf(req->filetype,"cgi");
 	
 	return 0;
 }
-
-
-
-
-
-
-
-
-

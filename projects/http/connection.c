@@ -1,9 +1,10 @@
-/*
+﻿/*
  * connection.c 
- * �ṩ�������������ӵĺ���
+ * 提供建立服务器连接的函数
  */
 
 #include "global.h"
+
 
 const char month_tab[] ="Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec ";
 const char day_tab[] = "Sun,Mon,Tue,Wed,Thu,Fri,Sat";
@@ -30,10 +31,10 @@ int creat_server_fd(const char *port)
 	if(getaddrinfo(NULL,port,&hints,&result) != 0);
 		ERR("getaddrinfo");
 	for(rp = result;rp != NULL;rp = result->ai_next){
-		//��ȡsocket
+		//获取socket
 		if((server_fd = socket(AF_INET,SOCK_STREAM,0)) == -1)
 			continue;
-		//��server_fd
+		//绑定server_fd
 		if(bind(server_fd,rp->ai_addr,rp->ai_addrlen) == 0)
 			break;
 	}
@@ -41,16 +42,16 @@ int creat_server_fd(const char *port)
 	if(server_fd == -1)
 		ERR("socket");
 	else{
-		//����server_fdΪnonblock
+		//设置server_fd为nonblock
 		if(set_fd_flags(server_fd,O_NONBLOCK) == -1)
 			ERR("fcntl:set nonblock");
-		//��ֹcgiдserver_fd
+		//禁止cgi写server_fd
 		if (fcntl(server_fd, F_SETFD, 1) == -1)
 			ERR("fcntl:set close-on-exec");
-		//����server_fd�ɸ���
+		//设置server_fd可复用
 		if (setsockopt(server_fd,SOL_SOCKET,SO_REUSEADDR,(void *)&sock_opt,sizeof(sock_opt)) == -1) 
 			ERR("setsockopt:set reuse");
-		//����server_fd
+		//监听server_fd
 		if(listen(server_fd,BACKLOGSIZE) == -1)
 			ERR("listen");
 		printf("Server standby.\n");
@@ -59,13 +60,46 @@ int creat_server_fd(const char *port)
 	return 0;
 }
 
-void wait_for_connect(int *fd,struct sockaddr_in *addr,socklen_t *addrlen)
+struct request * wait_for_connect(void)
 {
+	struct request *req;
+	char *request_buf;
+	request_buf = (char *)malloc(BUFSIZE);
+	memset(request_buf,0,BUFSIZE);
+	
+	int client_fd = -1;
+	struct sockaddr_in client_sock;
+	socklen_t client_len;
+	
 	current_time();
-	printf(" Waiting for connection...\n");
+	printf(" - Waiting for connection...\n");
+	//等待客户端写server_fd，一旦被写，数据存入request_buf
 	do{
-		*fd = accept(server_fd,(struct sockaddr *)addr,addrlen);
-	}while(*fd == -1);
+		client_fd = accept(server_fd,(struct sockaddr *)&client_sock,&client_len);
+	}while(client_fd == -1);
+	if(wait_for_input(client_fd,30) == 1){
+		if(recv(client_fd,request_buf,BUFSIZE,0) < 0)
+			ERR("recv");
+	}
+	
+	//把buf内容转换成小写字母
+	if(all_to_lowercase(request_buf) == -1)
+		ERR("all_to_lowercase");
+	
+    //把request_buf读取到request结构体
+	req = (struct request *)malloc(sizeof(struct request));
+	memset(req,0,sizeof(struct request));
+	req->fd = client_fd;
+	req->buf = request_buf;
+	if(read_request(req,request_buf) != 0){
+		send_response(client_fd,NOT_FOUND);
+		free(request_buf);
+		close(client_fd);
+		free(req);
+		ERR("read_request");
+	}
+	
+	return req;
 }
 
 char * current_time(void)
@@ -93,26 +127,29 @@ int wait_for_input(int fd,int seconds)
 	fd_set readfds;
 	struct timeval tv;
 
-	//����select fd_set
+	//设置select fd_set
 	FD_ZERO(&readfds);
 	FD_SET(fd,&readfds);
-	//���ٵȴ�1ms
+	//至少等待1ms
 	tv.tv_sec = seconds;
 	tv.tv_usec = 1;
 
 	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
 }
 
-void handle_request(int fd)
+void * handle_request(void *p)
 {
-	int ret;
-	memset(request_buf,0,BUFSIZE);
-	
-	ret = wait_for_input(fd,30);
-	if(ret == 1)
-		recv(fd,request_buf,BUFSIZE,0);
-	dispatch(fd);
-	close(fd);
+	while(1){
+		struct request *req;
+		//从列表中获取request进行操作
+		pthread_rwlock_wrlock(&lock);
+		while(queue->next == NULL);
+		req = (struct request *)list_pop(queue);
+		printf("%s\n\n",req->buf);
+		pthread_rwlock_unlock(&lock);
+		//分派request的具体操作
+		dispatch(req);
+	}
 }
 
 
@@ -128,13 +165,3 @@ int set_fd_flags(int fd,int new_flags)
     flags = fcntl(fd,F_SETFL,flags);
     return flags;
 }
-
-
-
-
-
-
-
-
-
-

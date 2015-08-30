@@ -5,18 +5,19 @@ TARGET	:= jyserver
 COMPONENTS	+= main.o
 COMPONENTS	+= connection.o
 COMPONENTS	+= protocal.o
+COMPONENTS	+= list.o
 
 CROSS_COMPILE	:= 
 #/usr/bin/arm-linux-gnueabi-
 CC	:= $(CROSS_COMPILE)gcc
 LD	:= $(CROSS_COMPILE)ld
-CFLAGS	:= -Wall
+CFLAGS	:= -Wall 
 
 #compile commands
 All: $(TARGET)
 
 $(TARGET): $(COMPONENTS)
-	$(CC) $(CFLAGS) -D__DEBUG__ -o $@ $^
+	$(CC) $(CFLAGS) -D__DEBUG__ -o $@ $^ -lpthread
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c -o $@ $^
