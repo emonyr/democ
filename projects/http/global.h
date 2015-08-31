@@ -40,19 +40,17 @@
 //#define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 //#define container_of(ptr, type, member) ({const typeof(((type *)0)->member) *__mptr = (ptr);(type *)((char *)__mptr - offsetof(type,member));})
 
-
+//for main.c
 char GMTtime[30];
-pthread_rwlock_t lock;
+pthread_mutex_t lock;
+struct request *queue;
+
+
 
 //for list.c
-struct list_node{
-	struct list_node *prev;
-	struct list_node *next;
-};
-struct list_node *queue;
-extern struct list_node * list_init(void);
-extern struct list_node * list_push(struct list_node *head);
-extern struct list_node * list_pop(struct list_node *head);
+extern struct request * list_init(void);
+extern struct request * list_push(struct request *head,struct request *new);
+extern struct request * list_pop(struct request *head);
 
 
 //for connection.c
@@ -67,7 +65,6 @@ extern int set_fd_flags(int fd,int new_flags);
 
 //for protocal.c
 struct request{
-	struct list_node *node;
 	int fd;
 	char type[8];
 	char hostname[HOSTLEN];
@@ -76,7 +73,9 @@ struct request{
 	char filetype[12];
 	char *buf;
 	char *response_buf;
+	struct request *next;
 };
+pthread_key_t buf_end_key;
 
 extern int dispatch(struct request *req);
 extern int response_get(struct request *req);

@@ -5,12 +5,13 @@
 
 #include "global.h"
 
-int buf_end;
 
 /* dispatch() 根据请求类型分派任务 */
 int dispatch(struct request *req)
 {	
-
+	int buf_end;
+	//获得buf_end key
+	pthread_setspecific(buf_end_key,&buf_end);
 	//通过结构体的type识别请求方法
 	char response_buf[BUFSIZE];
 	memset(response_buf,0,BUFSIZE);
@@ -26,7 +27,6 @@ int dispatch(struct request *req)
     else
 		print_to_buf(req->response_buf,NOT_FOUND,NULL);
 	
-	//printf("%s\n\n",req->response_buf);
 	send_response(req->fd,req->response_buf);
 	close(req->fd);
 	free(req->buf);
@@ -37,13 +37,11 @@ int dispatch(struct request *req)
 
 int response_get(struct request *req)
 {
-	int resoucefd,nbytes;
+	int resoucefd,nbytes,buf_end;
 	char filesize[32];
 	struct stat sb;
 	
-	current_time();
-	printf("\nProcessing GET request: pid = %d\n",getpid());
-	printf("+++++++req->filename: %s\n",req->filename);
+	printf("%s - Processing GET request: pid = %d , req->filename: %s\n",current_time(),(int)pthread_self(),req->filename);
 	
 	stat(req->filename,&sb);
 	if(sb.st_mode & S_IXUSR)
@@ -57,7 +55,8 @@ int response_get(struct request *req)
 	}
 	sprintf(filesize,"%d",(int)lseek(resoucefd,0,SEEK_END));
 
-	buf_end = 0;
+	
+	buf_end = *(int *)pthread_getspecific(buf_end_key);
 	print_to_buf(req->response_buf,"HTTP/1.1 200 OK\r\n",NULL);
 	print_to_buf(req->response_buf,"Server: jyserver\r\n",NULL);
 	print_to_buf(req->response_buf,"Date: %s\r\n",GMTtime);
@@ -74,9 +73,10 @@ int response_get(struct request *req)
 		nbytes = read(resoucefd,&req->response_buf[buf_end],1024);
 		buf_end = buf_end + nbytes;
 	}
+	close(resoucefd);
+	
 	if(strcmp(req->filetype,"cgi") == 0)
 		unlink(req->filename);
-	close(resoucefd);
 	
 	return 0;
 }
@@ -113,6 +113,8 @@ int send_response(int fd,char *msg)
 
 int print_to_buf(char *buf,const char *format,char *str)
 {
+	int buf_end;
+	buf_end = *(int *)pthread_getspecific(buf_end_key);
 	sprintf(&buf[buf_end],format,str);
 	buf_end = strlen(buf);
 	if(buf_end>BUFSIZE)
@@ -174,11 +176,11 @@ int read_request(struct request *req,char *request_buf)
 int handle_cgi(struct request *req)
 {
 	char output[12];
-	sprintf(output," >%s/%d",CGITMP,getpid());
+	sprintf(output," >%s/%d",CGITMP,(int)pthread_self());
 	system(strcat(req->filename,output));
 	execl("sed","-i","'s/\n/\r\n/g'","./o",(char *)NULL);
-	sprintf(req->filename,"%s/%d",CGITMP,getpid());
+	sprintf(req->filename,"%s/%d",CGITMP,(int)pthread_self());
 	sprintf(req->filetype,"cgi");
-	
+
 	return 0;
 }

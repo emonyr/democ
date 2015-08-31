@@ -5,26 +5,24 @@
 
 #include "global.h"
 
-struct list_node * list_init(void)
+struct request * list_init(void)
 {
-	struct list_node *head;
-	head = (struct list_node *)malloc(sizeof(struct list_node));
+	struct request *head;
+	head = (struct request *)malloc(sizeof(struct request));
 	head->next = NULL;
 	return head;
 }
 
-struct list_node * list_push(struct list_node *head)
+struct request * list_push(struct request *head,struct request *new)
 {
-	struct list_node *new;
-	new = list_init();
 	new->next = head->next;
 	head->next = new;
 	return new;
 }
 
-struct list_node * list_pop(struct list_node *head)
+struct request * list_pop(struct request *head)
 {
-	struct list_node *out;
+	struct request *out;
 	out = head->next;
 	head->next = out->next;
 	return out;

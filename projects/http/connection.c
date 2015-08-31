@@ -71,8 +71,7 @@ struct request * wait_for_connect(void)
 	struct sockaddr_in client_sock;
 	socklen_t client_len;
 	
-	current_time();
-	printf(" - Waiting for connection...\n");
+	printf("%s - Waiting for connection...\n",current_time());
 	//等待客户端写server_fd，一旦被写，数据存入request_buf
 	do{
 		client_fd = accept(server_fd,(struct sockaddr *)&client_sock,&client_len);
@@ -91,9 +90,9 @@ struct request * wait_for_connect(void)
 	memset(req,0,sizeof(struct request));
 	req->fd = client_fd;
 	req->buf = request_buf;
-	if(read_request(req,request_buf) != 0){
+	if(read_request(req,req->buf) != 0){
 		send_response(client_fd,NOT_FOUND);
-		free(request_buf);
+		free(req->buf);
 		close(client_fd);
 		free(req);
 		ERR("read_request");
@@ -116,7 +115,6 @@ char * current_time(void)
 	day[3] = '\0';
 	month[3] = '\0';
     sprintf(GMTtime,"%s,%02d %s %04d%02d:%02d:%02d GMT",day,showtime->tm_mday,month,showtime->tm_year+1900,showtime->tm_hour,showtime->tm_min,showtime->tm_sec);
-	printf("%s",GMTtime);
 	
 	return GMTtime;
 }
@@ -142,11 +140,14 @@ void * handle_request(void *p)
 	while(1){
 		struct request *req;
 		//从列表中获取request进行操作
-		pthread_rwlock_wrlock(&lock);
 		while(queue->next == NULL);
-		req = (struct request *)list_pop(queue);
-		printf("%s\n\n",req->buf);
-		pthread_rwlock_unlock(&lock);
+		pthread_mutex_lock(&lock);
+		if(queue->next == NULL){
+			pthread_mutex_unlock(&lock);
+			continue;
+		}
+		req = list_pop(queue);
+		pthread_mutex_unlock(&lock);
 		//分派request的具体操作
 		dispatch(req);
 	}
