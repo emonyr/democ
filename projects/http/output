@@ -1,5 +1,0 @@
-gcc -Wall  -c -o main.o main.c
-gcc -Wall  -c -o connection.o connection.c
-gcc -Wall  -c -o protocal.o protocal.c
-gcc -Wall  -c -o list.o list.c
-gcc -Wall  -D__DEBUG__ -o jyserver main.o connection.o protocal.o list.o -lpthread

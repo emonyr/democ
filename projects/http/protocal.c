@@ -9,8 +9,8 @@
 /* dispatch() 根据请求类型分派任务 */
 int dispatch(struct request *req)
 {	
-	int buf_end;
-	//获得buf_end key
+	int buf_end = 0;
+	//关联buf_end key
 	pthread_setspecific(buf_end_key,&buf_end);
 	//通过结构体的type识别请求方法
 	char response_buf[BUFSIZE];
@@ -29,7 +29,6 @@ int dispatch(struct request *req)
 	
 	send_response(req->fd,req->response_buf);
 	close(req->fd);
-	free(req->buf);
 	free(req);
 
 	return 0;
@@ -41,7 +40,7 @@ int response_get(struct request *req)
 	char filesize[32];
 	struct stat sb;
 	
-	printf("%s - Processing GET request: pid = %d , req->filename: %s\n",current_time(),(int)pthread_self(),req->filename);
+	printf("%s - Processing GET request: pid = %x , req->filename: %s\n",current_time(),(int)pthread_self(),req->filename);
 	
 	stat(req->filename,&sb);
 	if(sb.st_mode & S_IXUSR)
@@ -59,7 +58,7 @@ int response_get(struct request *req)
 	buf_end = *(int *)pthread_getspecific(buf_end_key);
 	print_to_buf(req->response_buf,"HTTP/1.1 200 OK\r\n",NULL);
 	print_to_buf(req->response_buf,"Server: jyserver\r\n",NULL);
-	print_to_buf(req->response_buf,"Date: %s\r\n",GMTtime);
+	print_to_buf(req->response_buf,"Date: %s\r\n",current_time());
 	print_to_buf(req->response_buf,"Connection: Closed\r\n",NULL);
 	print_to_buf(req->response_buf,"Content-Length: %s\r\n",filesize);
 	print_to_buf(req->response_buf,"Content-Type: text/html\r\n",NULL);
@@ -176,10 +175,10 @@ int read_request(struct request *req,char *request_buf)
 int handle_cgi(struct request *req)
 {
 	char output[12];
-	sprintf(output," >%s/%d",CGITMP,(int)pthread_self());
+	sprintf(output," >%s/%x",CGITMP,(int)pthread_self());
 	system(strcat(req->filename,output));
 	execl("sed","-i","'s/\n/\r\n/g'","./o",(char *)NULL);
-	sprintf(req->filename,"%s/%d",CGITMP,(int)pthread_self());
+	sprintf(req->filename,"%s/%x",CGITMP,(int)pthread_self());
 	sprintf(req->filetype,"cgi");
 
 	return 0;

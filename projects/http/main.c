@@ -30,7 +30,9 @@ int main(int argc,const char *argv[])
 	
 wait:
 	new = wait_for_connect();
+	pthread_mutex_lock(&lock);
 	list_push(queue,new);
+	pthread_mutex_unlock(&lock);
 	goto wait;
 	
 	return 0;

@@ -63,8 +63,7 @@ int creat_server_fd(const char *port)
 struct request * wait_for_connect(void)
 {
 	struct request *req;
-	char *request_buf;
-	request_buf = (char *)malloc(BUFSIZE);
+	char request_buf[BUFSIZE];
 	memset(request_buf,0,BUFSIZE);
 	
 	int client_fd = -1;
@@ -89,10 +88,8 @@ struct request * wait_for_connect(void)
 	req = (struct request *)malloc(sizeof(struct request));
 	memset(req,0,sizeof(struct request));
 	req->fd = client_fd;
-	req->buf = request_buf;
-	if(read_request(req,req->buf) != 0){
+	if(read_request(req,request_buf) != 0){
 		send_response(client_fd,NOT_FOUND);
-		free(req->buf);
 		close(client_fd);
 		free(req);
 		ERR("read_request");
@@ -138,14 +135,11 @@ int wait_for_input(int fd,int seconds)
 void * handle_request(void *p)
 {
 	while(1){
-		struct request *req;
 		//从列表中获取request进行操作
 		while(queue->next == NULL);
-		pthread_mutex_lock(&lock);
-		if(queue->next == NULL){
-			pthread_mutex_unlock(&lock);
+		if(pthread_mutex_trylock(&lock) != 0)
 			continue;
-		}
+		struct request *req;
 		req = list_pop(queue);
 		pthread_mutex_unlock(&lock);
 		//分派request的具体操作
