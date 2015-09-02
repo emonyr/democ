@@ -5,7 +5,6 @@ TARGET	:= jyserver
 COMPONENTS	+= main.o
 COMPONENTS	+= connection.o
 COMPONENTS	+= protocal.o
-COMPONENTS	+= list.o
 
 CROSS_COMPILE	:= 
 #/usr/bin/arm-linux-gnueabi-

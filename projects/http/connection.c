@@ -63,39 +63,59 @@ int creat_server_fd(const char *port)
 struct request * wait_for_connect(void)
 {
 	struct request *req;
-	char request_buf[BUFSIZE];
-	memset(request_buf,0,BUFSIZE);
+	req = (struct request *)malloc(sizeof(struct request));
+	memset(req,0,sizeof(struct request));
 	
 	int client_fd = -1;
 	struct sockaddr_in client_sock;
 	socklen_t client_len;
 	
 	printf("%s - Waiting for connection...\n",current_time());
-	//等待客户端写server_fd，一旦被写，数据存入request_buf
-	do{
-		client_fd = accept(server_fd,(struct sockaddr *)&client_sock,&client_len);
-	}while(client_fd == -1);
-	if(wait_for_input(client_fd,30) == 1){
-		if(recv(client_fd,request_buf,BUFSIZE,0) < 0)
+	//等待客户端连接
+	//设置select等待pipe列表被写入
+	fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(server_fd,&readfds);
+	select(FD_SETSIZE,&readfds,NULL,NULL,NULL);
+	client_fd = accept(server_fd,(struct sockaddr *)&client_sock,&client_len);
+	if(wait_to_read(client_fd,5) == 1){
+		if(recv(client_fd,req->request_buf,BUFSIZE,0) < 0)
 			ERR("recv");
 	}
 	
 	//把buf内容转换成小写字母
-	if(all_to_lowercase(request_buf) == -1)
+	if(all_to_lowercase(req->request_buf) == -1)
 		ERR("all_to_lowercase");
 	
     //把request_buf读取到request结构体
-	req = (struct request *)malloc(sizeof(struct request));
-	memset(req,0,sizeof(struct request));
 	req->fd = client_fd;
-	if(read_request(req,request_buf) != 0){
+	if(read_request(req) != 0){
 		send_response(client_fd,NOT_FOUND);
-		close(client_fd);
+		close(req->fd);
 		free(req);
 		ERR("read_request");
 	}
 	
 	return req;
+}
+
+void * handle_request(void *p)
+{
+	//设置select等待pipe列表被写入
+	fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(pipefd[0],&readfds);
+	select(FD_SETSIZE,&readfds,NULL,NULL,NULL);
+	//尝试获取互斥锁，如失败则返回等待状态
+	if(pthread_mutex_trylock(&lock) != 0)
+		pthread_exit(NULL);
+	struct request *req;
+	read(pipefd[0],(void *)&req,sizeof(req));
+	pthread_mutex_unlock(&lock);
+	//分派request的具体操作
+	if(req)
+		dispatch(req);
+	pthread_exit(NULL);
 }
 
 char * current_time(void)
@@ -116,7 +136,7 @@ char * current_time(void)
 	return GMTtime;
 }
 
-int wait_for_input(int fd,int seconds)
+int wait_to_read(int fd,int seconds)
 {
 
 	fd_set readfds;
@@ -132,21 +152,21 @@ int wait_for_input(int fd,int seconds)
 	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
 }
 
-void * handle_request(void *p)
+int wait_to_write(int fd,int seconds)
 {
-	while(1){
-		//从列表中获取request进行操作
-		while(queue->next == NULL);
-		if(pthread_mutex_trylock(&lock) != 0)
-			continue;
-		struct request *req;
-		req = list_pop(queue);
-		pthread_mutex_unlock(&lock);
-		//分派request的具体操作
-		dispatch(req);
-	}
-}
 
+	fd_set writefds;
+	struct timeval tv;
+
+	//设置select fd_set
+	FD_ZERO(&writefds);
+	FD_SET(fd,&writefds);
+	//至少等待1ms
+	tv.tv_sec = seconds;
+	tv.tv_usec = 1;
+
+	return select(FD_SETSIZE,NULL,&writefds,NULL,&tv);
+}
 
 int set_fd_flags(int fd,int new_flags)
 {

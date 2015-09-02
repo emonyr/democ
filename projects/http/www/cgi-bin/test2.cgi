@@ -1,6 +1,6 @@
 #!/bin/sh
 echo Content-type: text/html
-ecoh
+echo
 echo "<HTML><HEAD>"
 echo "<TITLE>Echo current time</TITLE>"
 echo "</HEAD><BODY>"
