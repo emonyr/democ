@@ -14,13 +14,13 @@ int dispatch(struct request *req)
 	pthread_setspecific(buf_end_key,&buf_end);
 	
 	//通过结构体的type识别请求方法
-	if((strcmp(req->type,"get") == 0) || (strcmp(req->type,"head") == 0))
+	if((strcmp(req->method,"get") == 0) || (strcmp(req->method,"head") == 0))
 		response_get(req);
-    else if(strcmp(req->type,"post") == 0)
+    else if(strcmp(req->method,"post") == 0)
 		response_post(req);
-    else if(strcmp(req->type,"put") == 0)
+    else if(strcmp(req->method,"put") == 0)
 		response_put(req);
-	else if(strcmp(req->type,"delete") == 0)
+	else if(strcmp(req->method,"delete") == 0)
 		response_delete(req);
     else
 		print_to_buf(req->response_buf,NOT_FOUND,NULL);
@@ -60,7 +60,7 @@ int response_get(struct request *req)
 	print_to_buf(req->response_buf,"Cache-Control: no-cache\r\n",NULL);
 	print_to_buf(req->response_buf,"\r\n",NULL);
 	send_response(req->fd,req->response_buf);
-	if(strcmp(req->type,"head") == 0)
+	if(strcmp(req->method,"head") == 0)
 		return 0;
 	if(strcmp(req->filetype,"cgi") == 0){
 		handle_cgi(req);
@@ -135,7 +135,6 @@ int read_request(struct request *req)
 	int i=0;
 	char *c;
 	c = req->request_buf;
-	struct stat sb;
 	
 	//跳过空格
 	while(*c == ' ')
@@ -143,11 +142,11 @@ int read_request(struct request *req)
 	
 	//读取请求方法
     while((*c != ' ') && (i < 8)){
-		req->type[i] = *c;
+		req->method[i] = *c;
 		c++;
 		i++;
 	}
-	req->type[i] = '\0';
+	req->method[i] = '\0';
 	
 	//读取URI
 	while(*c != '/')
@@ -166,9 +165,11 @@ int read_request(struct request *req)
 		}
 		req->filename[i] = '\0';
 	}
-	stat(req->filename,&sb);
-	if(sb.st_mode & S_IXUSR)
+	chdir(req->filename);
+	getcwd(req->filepath,sizeof(req->filepath));
+	if(strcmp(req->filepath,CGIBIN) == 0)
 		sprintf(req->filetype,"cgi");
+	
 
     return 0;
 }

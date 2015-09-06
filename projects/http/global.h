@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include <sys/wait.h>
 #include <sys/types.h>
@@ -30,10 +31,10 @@
 #endif
 
 #define ROOT "./www"
-#define CGITMP "./www/cgi-bin/tmp"
+#define CGIBIN "./www/cgi-bin"
 #define NOT_FOUND "HTTP/1.1 400 Bad Request\r\n\r\n404 not found"
 
-#define POOLSIZE 16
+#define POOLSIZE 8
 #define BACKLOGSIZE	1024
 #define BUFSIZE	8192
 #define HOSTLEN 64
@@ -53,17 +54,18 @@ extern struct request * wait_for_connect(void);
 extern char * current_time(void);
 extern int wait_to_read(int fd,int seconds);
 extern int wait_to_write(int fd,int seconds);
-extern void * handle_request(void *);
+extern void * handle_request(void *p);
 extern int set_fd_flags(int fd,int new_flags);
 
 
 //for protocal.c
 struct request{
 	int fd;
-	char type[8];
+	char method[8];
 	char hostname[HOSTLEN];
 	char port[4];
 	char filename[FILELEN];
+	char filepath[FILELEN];
 	char filetype[12];
 	char request_buf[BUFSIZE];
 	char response_buf[BUFSIZE];

@@ -30,12 +30,10 @@ int main(int argc,const char *argv[])
 	//	pthread_create(&worker[i],NULL,handle_request,NULL);
 	
 wait:
-	if(i == POOLSIZE){
-		i = 0;
-		sleep(1);
-	}
 	new = wait_for_connect();
+	pthread_mutex_lock(&lock);
 	write(pipefd[1],(const void *)&new,sizeof(new));
+	pthread_mutex_unlock(&lock);
 	pthread_create(&worker[i],NULL,handle_request,NULL);
 	i++;
 	goto wait;
