@@ -25,8 +25,6 @@ int dispatch(struct request *req)
     else
 		print_to_buf(req->response_buf,NOT_FOUND,NULL);
 	
-	if(strcmp(req->filetype,"cgi") == 0)
-		handle_cgi(req);
 	close(req->fd);
 	free(req);
 
@@ -147,6 +145,7 @@ int read_request(struct request *req)
 		i++;
 	}
 	req->method[i] = '\0';
+	all_to_lowercase(req->method);
 	
 	//¶ÁÈ¡URI
 	while(*c != '/')
@@ -165,11 +164,16 @@ int read_request(struct request *req)
 		}
 		req->filename[i] = '\0';
 	}
-	chdir(req->filename);
-	getcwd(req->filepath,sizeof(req->filepath));
+	c = strrchr(req->filename,'/');
+	i = (void *)c - (void *)req->filename;
+	if(i < 0)
+		i = -i;
+	strncpy(req->filepath,req->filename,i);
 	if(strcmp(req->filepath,CGIBIN) == 0)
 		sprintf(req->filetype,"cgi");
-	
+	else
+		sprintf(req->filetype,"text");
+	printf("%s\n",req->filetype);
 
     return 0;
 }

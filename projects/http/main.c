@@ -12,13 +12,12 @@ int main(int argc,const char *argv[])
 		return -1;
 	}
 	
-	int i=0;
+	int i=0,server_fd;
 	pthread_t worker[POOLSIZE];
-	struct request *new;
 
 	
 	//建立服务器端socket
-	creat_server_fd(argv[1]);
+	server_fd = creat_server_fd(argv[1]);
 	//初始化读写锁
 	pthread_mutex_init(&lock,NULL);
 	//创建key文件
@@ -26,17 +25,12 @@ int main(int argc,const char *argv[])
 	//创建无名管道作为request队列
 	pipe(pipefd);
 	//初始化线程池
-	//for(i=0;i<POOLSIZE;i++)
-	//	pthread_create(&worker[i],NULL,handle_request,NULL);
-	
-wait:
-	new = wait_for_connect();
-	pthread_mutex_lock(&lock);
-	write(pipefd[1],(const void *)&new,sizeof(new));
-	pthread_mutex_unlock(&lock);
-	pthread_create(&worker[i],NULL,handle_request,NULL);
-	i++;
-	goto wait;
-	
+	for(i=0;i<POOLSIZE;i++)
+		pthread_create(&worker[i],NULL,handle_request,NULL);
+
+	wait_for_connect(server_fd);
+
 	return 0;
 }
+
+

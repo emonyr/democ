@@ -60,32 +60,57 @@ int creat_server_fd(const char *port)
 	return 0;
 }
 
-struct request * wait_for_connect(void)
+void wait_for_connect(int server_fd)
+{
+	int i,nfds,epoll_fd,client_fd;
+	socklen_t client_len;
+	struct sockaddr_in client_sock;
+	struct epoll_event ev,events[MAX_EVENTS];
+	
+	epoll_fd = epoll_create(10);
+	if(epoll_fd == -1)
+		ERR("epoll_create");
+	
+	ev.events = EPOLLIN;
+	ev.data.fd = server_fd;
+	if (epoll_ctl(epoll_fd,EPOLL_CTL_ADD,server_fd,&ev) == -1)
+		ERR("epoll_ctl: server_fd");
+	
+	while(1){
+		//等待客户端连接
+		printf("%s - Waiting for connection...\n",current_time());
+		nfds = epoll_wait(epoll_fd,events,MAX_EVENTS,-1);
+		if(nfds == -1)
+			ERR("epoll_wait");
+		
+		for(i = 0; i < nfds; ++i) {
+			if(events[i].data.fd == server_fd) {
+				client_fd = accept(server_fd,(struct sockaddr *)&client_sock,&client_len);
+				if(client_fd == -1)
+					ERR("accept");
+				//设置server_fd为nonblock
+				if(set_fd_flags(client_fd,O_NONBLOCK) == -1)
+					ERR("fcntl:set nonblock");
+				ev.events = EPOLLIN | EPOLLET;
+				ev.data.fd = client_fd;
+				if(epoll_ctl(epoll_fd,EPOLL_CTL_ADD,client_fd,&ev) == -1)
+					ERR("epoll_ctl: client_fd");
+			}else
+				handle_fd(events[i].data.fd);
+		}
+	}
+}
+
+int handle_fd(int client_fd)
 {
 	struct request *req;
 	req = (struct request *)malloc(sizeof(struct request));
 	memset(req,0,sizeof(struct request));
 	
-	int client_fd = -1;
-	struct sockaddr_in client_sock;
-	socklen_t client_len;
-	
-	printf("%s - Waiting for connection...\n",current_time());
-	//等待客户端连接
-	//设置select等待pipe列表被写入
-	fd_set readfds;
-	FD_ZERO(&readfds);
-	FD_SET(server_fd,&readfds);
-	select(FD_SETSIZE,&readfds,NULL,NULL,NULL);
-	client_fd = accept(server_fd,(struct sockaddr *)&client_sock,&client_len);
-	if(wait_to_read(client_fd,5) == 1){
+	if(wait_to_read(client_fd,10) == 1){
 		if(recv(client_fd,req->request_buf,BUFSIZE,0) < 0)
 			ERR("recv");
 	}
-	
-	//把buf内容转换成小写字母
-	if(all_to_lowercase(req->request_buf) == -1)
-		ERR("all_to_lowercase");
 	
     //把request_buf读取到request结构体
 	req->fd = client_fd;
@@ -95,27 +120,54 @@ struct request * wait_for_connect(void)
 		free(req);
 		ERR("read_request");
 	}
+	//把新request添加到pipe等待列表
+	add_to_pipe(req);
 	
-	return req;
+	return 0;
 }
 
 void * handle_request(void *p)
 {
-	//设置select等待pipe列表被写入
-	fd_set readfds;
-	FD_ZERO(&readfds);
-	FD_SET(pipefd[0],&readfds);
-	select(FD_SETSIZE,&readfds,NULL,NULL,NULL);
-	//尝试获取互斥锁，如失败则返回等待状态
-	if(pthread_mutex_trylock(&lock) != 0)
-		pthread_exit(NULL);
+	int i,nfds,epoll_fd;
+	struct epoll_event ev,events[MAX_EVENTS];
 	struct request *req;
-	read(pipefd[0],(void *)&req,sizeof(req));
+	
+	epoll_fd = epoll_create(10);
+	if(epoll_fd == -1)
+		ERR("epoll_create");
+	
+	ev.events = EPOLLIN;
+	ev.data.fd = pipefd[0];
+	if (epoll_ctl(epoll_fd,EPOLL_CTL_ADD,pipefd[0],&ev) == -1)
+		ERR("epoll_ctl: pipefd[0]");
+	
+	while(1){
+		nfds = epoll_wait(epoll_fd,events,MAX_EVENTS,-1);
+		if(nfds == -1)
+			ERR("epoll_wait");
+		
+		for(i = 0; i < nfds; ++i) {
+			if(events[i].data.fd == pipefd[0])
+			//获取互斥锁，读取pipe等待队列
+			if(pthread_mutex_trylock(&lock) != 0);
+				continue;
+			read(pipefd[0],(void *)&req,sizeof(req));
+			pthread_mutex_unlock(&lock);
+			//分派request的具体操作
+			if(req)
+				dispatch(req);
+		}
+	}
+	return NULL;
+}
+
+int add_to_pipe(struct request *req)
+{
+	pthread_mutex_lock(&lock);
+	write(pipefd[1],(const void *)&req,sizeof(req));
 	pthread_mutex_unlock(&lock);
-	//分派request的具体操作
-	if(req)
-		dispatch(req);
-	pthread_exit(NULL);
+	
+	return 0;
 }
 
 char * current_time(void)
@@ -138,34 +190,22 @@ char * current_time(void)
 
 int wait_to_read(int fd,int seconds)
 {
+	int epoll_fd;
+	struct epoll_event ev,events;
+	
+	epoll_fd = epoll_create(1);
+	if(epoll_fd == -1)
+		ERR("epoll_create");
+	
+	ev.events = EPOLLIN;
+	ev.data.fd = fd;
+	if (epoll_ctl(epoll_fd,EPOLL_CTL_ADD,fd,&ev) == -1)
+		ERR("epoll_ctl: fd");
+	
+	if(epoll_wait(epoll_fd,&events,1,seconds) == -1)
+		ERR("epoll_wait");
 
-	fd_set readfds;
-	struct timeval tv;
-
-	//设置select fd_set
-	FD_ZERO(&readfds);
-	FD_SET(fd,&readfds);
-	//至少等待1ms
-	tv.tv_sec = seconds;
-	tv.tv_usec = 1;
-
-	return select(FD_SETSIZE,&readfds,NULL,NULL,&tv);
-}
-
-int wait_to_write(int fd,int seconds)
-{
-
-	fd_set writefds;
-	struct timeval tv;
-
-	//设置select fd_set
-	FD_ZERO(&writefds);
-	FD_SET(fd,&writefds);
-	//至少等待1ms
-	tv.tv_sec = seconds;
-	tv.tv_usec = 1;
-
-	return select(FD_SETSIZE,NULL,&writefds,NULL,&tv);
+	return events.data.fd;
 }
 
 int set_fd_flags(int fd,int new_flags)

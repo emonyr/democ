@@ -22,6 +22,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/select.h>
+#include <sys/epoll.h>
 
 
 #ifdef __DEBUG__
@@ -34,7 +35,8 @@
 #define CGIBIN "./www/cgi-bin"
 #define NOT_FOUND "HTTP/1.1 400 Bad Request\r\n\r\n404 not found"
 
-#define POOLSIZE 8
+#define MAX_EVENTS 10
+#define POOLSIZE 4
 #define BACKLOGSIZE	1024
 #define BUFSIZE	8192
 #define HOSTLEN 64
@@ -50,10 +52,11 @@ int pipefd[2];
 //for connection.c
 extern int server_fd;
 extern int creat_server_fd(const char *port);
-extern struct request * wait_for_connect(void);
+extern void wait_for_connect(int server_fd);
+extern int add_to_pipe(struct request *req);
 extern char * current_time(void);
 extern int wait_to_read(int fd,int seconds);
-extern int wait_to_write(int fd,int seconds);
+extern int handle_fd(int client_fd);
 extern void * handle_request(void *p);
 extern int set_fd_flags(int fd,int new_flags);
 
